@@ -184,7 +184,8 @@
     ready: false,
     masterGain: null,
     compressor: null,
-    unlockPromise: null
+    unlockPromise: null,
+    primed: false
   }
 
   const state = {
@@ -228,6 +229,7 @@
       lastX: window.innerWidth * 0.5,
       lastY: window.innerHeight * 0.68,
       angle: -Math.PI / 3,
+      pointerType: "mouse",
       speed: 0,
       power: 0,
       hitCooldown: 0
@@ -280,6 +282,14 @@
     const bossRamp = clamp(state.bossesDefeated / 4, 0, 1)
 
     return clamp(timeRamp * 0.72 + bossRamp * 0.45, 0, 1)
+  }
+
+  function usingCoarseInput() {
+    return (
+      state.pointer.pointerType === "touch" ||
+      window.matchMedia("(pointer: coarse)").matches ||
+      navigator.maxTouchPoints > 0
+    )
   }
 
   function markHudDirty() {
@@ -335,6 +345,7 @@
     state.pointer.y = y
     state.pointer.lastX = x
     state.pointer.lastY = y
+    state.pointer.pointerType = usingCoarseInput() ? "touch" : "mouse"
     state.pointer.speed = 0
     state.pointer.power = 0
     state.pointer.angle = -Math.PI / 3
@@ -473,6 +484,20 @@
     }
 
     audio.ready = audio.context.state === "running"
+
+    if (audio.ready && !audio.primed) {
+      playTone({
+        frequency: usingCoarseInput() ? 720 : 520,
+        slideTo: usingCoarseInput() ? 940 : 740,
+        duration: 0.05,
+        type: "triangle",
+        gain: usingCoarseInput() ? 0.045 : 0.026,
+        filterFrequency: usingCoarseInput() ? 7200 : 5200,
+        voices: [1, 2]
+      })
+      audio.primed = true
+    }
+
     updateSoundLabel()
     return audio.ready
   }
@@ -499,17 +524,28 @@
 
     const now = audio.context.currentTime + delay
     const outputGain = audio.context.createGain()
-    const filter = audio.context.createBiquadFilter()
+    const lowpass = audio.context.createBiquadFilter()
+    const highpass = audio.context.createBiquadFilter()
+    const coarseMix = usingCoarseInput()
+    const frequencyScale = coarseMix ? 1.55 : 1
+    const adjustedFrequency = frequency * frequencyScale
+    const adjustedSlideTo = slideTo * frequencyScale
+    const adjustedGain = gain * (coarseMix ? 1.22 : 1)
+    const adjustedFilterFrequency = filterFrequency * (coarseMix ? 1.6 : 1)
 
-    filter.type = "lowpass"
-    filter.frequency.setValueAtTime(filterFrequency, now)
-    filter.Q.value = 0.8
+    highpass.type = "highpass"
+    highpass.frequency.setValueAtTime(coarseMix ? 320 : 180, now)
+    highpass.Q.value = coarseMix ? 0.9 : 0.7
+    lowpass.type = "lowpass"
+    lowpass.frequency.setValueAtTime(adjustedFilterFrequency, now)
+    lowpass.Q.value = coarseMix ? 1.1 : 0.8
 
     outputGain.gain.setValueAtTime(0.0001, now)
-    outputGain.gain.linearRampToValueAtTime(gain, now + attack)
+    outputGain.gain.linearRampToValueAtTime(adjustedGain, now + attack)
     outputGain.gain.exponentialRampToValueAtTime(0.0001, now + duration)
 
-    filter.connect(outputGain)
+    highpass.connect(lowpass)
+    lowpass.connect(outputGain)
     outputGain.connect(audio.masterGain)
 
     for (let index = 0; index < voices.length; index += 1) {
@@ -519,15 +555,15 @@
       const level = 1 / (1 + index * 1.25)
 
       oscillator.type = type
-      oscillator.frequency.setValueAtTime(frequency * ratio, now)
+      oscillator.frequency.setValueAtTime(adjustedFrequency * ratio, now)
       oscillator.frequency.exponentialRampToValueAtTime(
-        Math.max(40, slideTo * ratio),
+        Math.max(70, adjustedSlideTo * ratio),
         now + duration
       )
       oscillator.detune.value = index === 0 ? 0 : (index % 2 === 0 ? -7 : 7)
       oscillatorGain.gain.value = level
       oscillator.connect(oscillatorGain)
-      oscillatorGain.connect(filter)
+      oscillatorGain.connect(highpass)
       oscillator.start(now)
       oscillator.stop(now + duration)
     }
@@ -535,82 +571,82 @@
 
   function playStartSound() {
     playTone({
-      frequency: 180,
-      slideTo: 260,
+      frequency: 300,
+      slideTo: 430,
       duration: 0.18,
       type: "triangle",
-      gain: 0.11,
-      filterFrequency: 2600,
+      gain: 0.12,
+      filterFrequency: 3800,
       voices: [1, 1.5]
     })
     playTone({
-      frequency: 260,
-      slideTo: 420,
+      frequency: 430,
+      slideTo: 680,
       duration: 0.24,
       delay: 0.1,
       type: "triangle",
-      gain: 0.09,
-      filterFrequency: 3200,
+      gain: 0.1,
+      filterFrequency: 4600,
       voices: [1, 2]
     })
   }
 
   function playDeflectSound() {
     playTone({
-      frequency: rand(420, 540),
-      slideTo: rand(180, 240),
+      frequency: rand(680, 920),
+      slideTo: rand(360, 520),
       duration: 0.14,
       type: "sawtooth",
-      gain: 0.08,
-      filterFrequency: 3600,
+      gain: 0.09,
+      filterFrequency: 5200,
       voices: [1, 2.02]
     })
   }
 
   function playParrySound() {
     playTone({
-      frequency: rand(280, 380),
-      slideTo: rand(140, 190),
+      frequency: rand(520, 760),
+      slideTo: rand(260, 380),
       duration: 0.18,
       type: "triangle",
-      gain: 0.1,
-      filterFrequency: 2800,
+      gain: 0.11,
+      filterFrequency: 4200,
       voices: [1, 1.5, 2]
     })
   }
 
   function playDamageSound() {
     playTone({
-      frequency: 170,
-      slideTo: 80,
+      frequency: 240,
+      slideTo: 120,
       duration: 0.24,
       type: "square",
       gain: 0.12,
-      filterFrequency: 1800,
+      filterFrequency: 2600,
       voices: [1, 0.5]
     })
   }
 
   function playBossSpawnSound() {
     playTone({
-      frequency: 120,
-      slideTo: 340,
+      frequency: 180,
+      slideTo: 460,
       duration: 0.48,
       type: "sawtooth",
       gain: 0.12,
-      filterFrequency: 2600,
+      filterFrequency: 3600,
       voices: [1, 1.5, 2]
     })
   }
 
   function playBossDamageSound() {
     playTone({
-      frequency: rand(220, 280),
-      slideTo: rand(90, 130),
+      frequency: rand(340, 460),
+      slideTo: rand(180, 240),
       duration: 0.2,
       type: "square",
       gain: 0.1,
-      filterFrequency: 2200,
+      filterFrequency: 3200,
       voices: [1, 1.5]
     })
   }
@@ -1593,7 +1629,7 @@
     const handleFrontY = state.pointer.y - directionY * 10
     const handleBackX = state.pointer.x + directionX * 22
     const handleBackY = state.pointer.y + directionY * 22
-    const bladeLength = 118 + state.pointer.power * 72
+    const bladeLength = (118 + state.pointer.power * 72) * (usingCoarseInput() ? 0.88 : 1)
     const bladeTipX = handleFrontX - directionX * bladeLength
     const bladeTipY = handleFrontY - directionY * bladeLength
     const pommelX = handleBackX + directionX * 8
@@ -1619,7 +1655,8 @@
   }
 
   function updatePointer(dt) {
-    const follow = 1 - Math.exp(-dt * 18)
+    const coarseInput = usingCoarseInput()
+    const follow = 1 - Math.exp(-dt * (coarseInput ? 14 : 18))
 
     state.pointer.x = mix(state.pointer.x, state.pointer.targetX, follow)
     state.pointer.y = mix(state.pointer.y, state.pointer.targetY, follow)
@@ -1628,8 +1665,9 @@
     const dy = state.pointer.y - state.pointer.lastY
     const distance = Math.hypot(dx, dy)
 
-    state.pointer.speed = distance / Math.max(dt, 0.001)
-    state.pointer.power = clamp((state.pointer.speed - 120) / 900, 0, 1)
+    const rawSpeed = distance / Math.max(dt, 0.001)
+    state.pointer.speed = rawSpeed * (coarseInput ? 0.72 : 1)
+    state.pointer.power = clamp((state.pointer.speed - (coarseInput ? 165 : 120)) / (coarseInput ? 980 : 900), 0, 1)
 
     if (distance > 0.25) {
       state.pointer.angle = Math.atan2(dy, dx)
@@ -1680,7 +1718,9 @@
   }
 
   function tryDeflectBolt(bolt) {
-    if (state.pointer.speed < 180 || state.pointer.hitCooldown > 0) {
+    const coarseInput = usingCoarseInput()
+
+    if (state.pointer.speed < (coarseInput ? 235 : 180) || state.pointer.hitCooldown > 0) {
       return null
     }
 
@@ -1696,7 +1736,7 @@
         segment.by
       )
 
-      if (distance < bolt.radius + 18 + state.pointer.power * 8) {
+      if (distance < bolt.radius + (coarseInput ? 11 : 18) + state.pointer.power * (coarseInput ? 5 : 8)) {
         return segment
       }
     }
@@ -1732,7 +1772,7 @@
     bolt.deflectY = bolt.y
 
     state.combo += 1
-    state.pointer.hitCooldown = 0.055
+    state.pointer.hitCooldown = usingCoarseInput() ? 0.085 : 0.055
     addScore(10 + Math.min(50, state.combo * 2))
     state.pulse = 1
     state.shake = Math.min(18, state.shake + 4)
@@ -1849,7 +1889,13 @@
   }
 
   function findParryContact(segment, width) {
-    if (!state.playerBlade || state.pointer.speed < 190 || state.pointer.hitCooldown > 0) {
+    const coarseInput = usingCoarseInput()
+
+    if (
+      !state.playerBlade ||
+      state.pointer.speed < (coarseInput ? 248 : 190) ||
+      state.pointer.hitCooldown > 0
+    ) {
       return null
     }
 
@@ -1882,7 +1928,7 @@
       }
     }
 
-    if (bestDistance <= width + 18 + state.pointer.power * 12) {
+    if (bestDistance <= width + (coarseInput ? 11 : 18) + state.pointer.power * (coarseInput ? 8 : 12)) {
       return bestPoint
     }
 
@@ -1894,7 +1940,7 @@
     slash.parryTimer = 0.18
 
     state.combo += 1
-    state.pointer.hitCooldown = 0.06
+    state.pointer.hitCooldown = usingCoarseInput() ? 0.09 : 0.06
     addScore(slash.scoreValue + Math.min(60, state.combo * 3))
     state.pulse = 1
     state.shake = Math.min(18, state.shake + 5)
@@ -2812,6 +2858,10 @@
   }
 
   function handlePointerMove(event) {
+    if (event.pointerType) {
+      state.pointer.pointerType = event.pointerType
+    }
+
     state.pointer.targetX = event.clientX
     state.pointer.targetY = event.clientY
   }
@@ -2840,6 +2890,10 @@
   window.addEventListener("pointermove", handlePointerMove)
   window.addEventListener("pointerdown", handlePointerMove)
   window.addEventListener("pointerdown", () => {
+    void handleUserActivation()
+  }, { passive: true })
+  window.addEventListener("touchstart", () => {
+    state.pointer.pointerType = "touch"
     void handleUserActivation()
   }, { passive: true })
   window.addEventListener("keydown", () => {
