@@ -397,23 +397,9 @@
 
     for (const pool of Object.values(audio.samplePools)) {
       for (const clip of pool) {
-        clip.muted = true
-
-        try {
-          const playPromise = clip.play()
-
-          if (playPromise && typeof playPromise.then === "function") {
-            playPromise.catch(() => {})
-          }
-        } catch {}
-
-        clip.pause()
-
-        try {
-          clip.currentTime = 0
-        } catch {}
-
-        clip.muted = false
+        if (clip.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+          clip.load()
+        }
       }
     }
 
@@ -469,6 +455,53 @@
         })
         .catch(() => {
           setAudioDiagnostic("Audio playback was blocked on this device.", "error")
+          cleanup()
+        })
+    }
+
+    return true
+  }
+
+  function playFreshSample(name, volume = 1) {
+    if (!audio.enabled) {
+      return false
+    }
+
+    const src = SAMPLE_AUDIO_FILES[name]
+
+    if (!src) {
+      return false
+    }
+
+    const clip = new Audio(src)
+    clip.preload = "auto"
+    clip.playsInline = true
+    clip.defaultMuted = false
+    clip.muted = false
+    clip.volume = volume
+    clip.setAttribute("playsinline", "true")
+    clip.setAttribute("webkit-playsinline", "true")
+
+    audio.activeClips.add(clip)
+
+    const cleanup = () => {
+      audio.activeClips.delete(clip)
+    }
+
+    clip.addEventListener("ended", cleanup, { once: true })
+    clip.addEventListener("error", cleanup, { once: true })
+
+    const playPromise = clip.play()
+
+    if (playPromise && typeof playPromise.then === "function") {
+      playPromise
+        .then(() => {
+          setAudioDiagnostic("Audio playback started.", "ok")
+        })
+        .catch((error) => {
+          const label =
+            error && typeof error.name === "string" ? error.name : "unknown error"
+          setAudioDiagnostic(`Audio playback failed: ${label}.`, "error")
           cleanup()
         })
     }
@@ -669,21 +702,72 @@
 
     audio.ready = audio.context.state === "running"
 
-    if (audio.ready && !audio.primed && !shouldUseSampleAudio()) {
-      playTone({
-        frequency: usingCoarseInput() ? 720 : 520,
-        slideTo: usingCoarseInput() ? 940 : 740,
-        duration: 0.05,
-        type: "triangle",
-        gain: usingCoarseInput() ? 0.045 : 0.026,
-        filterFrequency: usingCoarseInput() ? 7200 : 5200,
-        voices: [1, 2]
-      })
+    if (audio.ready && !audio.primed && audio.masterGain) {
+      const buffer = audio.context.createBuffer(1, 1, audio.context.sampleRate)
+      const source = audio.context.createBufferSource()
+      const gain = audio.context.createGain()
+
+      gain.gain.value = 0.00001
+      source.buffer = buffer
+      source.connect(gain)
+      gain.connect(audio.masterGain)
+      source.start()
       audio.primed = true
     }
 
     updateSoundLabel()
     return audio.ready
+  }
+
+  function playDiagnosticTone() {
+    if (!audio.enabled || !audio.context || !audio.masterGain) {
+      return false
+    }
+
+    if (audio.context.state !== "running") {
+      audio.ready = false
+      return false
+    }
+
+    const now = audio.context.currentTime + 0.01
+    const outputGain = audio.context.createGain()
+    const lowpass = audio.context.createBiquadFilter()
+    const highpass = audio.context.createBiquadFilter()
+    const frequencies = [740, 1040, 880]
+
+    highpass.type = "highpass"
+    highpass.frequency.setValueAtTime(420, now)
+    highpass.Q.value = 0.8
+    lowpass.type = "lowpass"
+    lowpass.frequency.setValueAtTime(4200, now)
+    lowpass.Q.value = 0.7
+
+    outputGain.gain.setValueAtTime(0.0001, now)
+    outputGain.gain.linearRampToValueAtTime(usingCoarseInput() ? 0.18 : 0.12, now + 0.02)
+    outputGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.82)
+
+    highpass.connect(lowpass)
+    lowpass.connect(outputGain)
+    outputGain.connect(audio.masterGain)
+
+    for (let index = 0; index < frequencies.length; index += 1) {
+      const oscillator = audio.context.createOscillator()
+      const oscillatorGain = audio.context.createGain()
+      const startTime = now + index * 0.18
+      const endTime = startTime + 0.22
+
+      oscillator.type = index === 1 ? "square" : "triangle"
+      oscillator.frequency.setValueAtTime(frequencies[index], startTime)
+      oscillator.frequency.exponentialRampToValueAtTime(frequencies[index] * 0.92, endTime)
+      oscillatorGain.gain.value = index === 1 ? 0.72 : 0.56
+      oscillator.connect(oscillatorGain)
+      oscillatorGain.connect(highpass)
+      oscillator.start(startTime)
+      oscillator.stop(endTime)
+    }
+
+    setAudioDiagnostic("Audio playback started.", "ok")
+    return true
   }
 
   function playTone({
@@ -3260,17 +3344,11 @@
 
     setAudioDiagnostic("Trying to play the start sound...", "")
 
-    if (shouldUseSampleAudio()) {
-      playSample("start", 1)
-    }
-
     const audioReady = await handleImmediateAudioActivation()
+    const sampleStarted = shouldUseSampleAudio() ? playFreshSample("start", 1) : false
+    const toneStarted = audioReady ? playDiagnosticTone() : false
 
-    if (audioReady) {
-      playStartToneOnly()
-    }
-
-    if (!audioReady && !shouldUseSampleAudio()) {
+    if (!sampleStarted && !toneStarted) {
       setAudioDiagnostic("Audio playback was blocked on this device.", "error")
     }
   }
