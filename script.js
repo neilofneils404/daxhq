@@ -185,7 +185,6 @@
     context: null,
     ready: false,
     masterGain: null,
-    compressor: null,
     unlockPromise: null,
     primed: false,
     bufferWarmPromise: null,
@@ -771,16 +770,9 @@
       audio.context = new Context({
         latencyHint: "interactive"
       })
-      audio.compressor = audio.context.createDynamicsCompressor()
       audio.masterGain = audio.context.createGain()
-      audio.compressor.threshold.value = -18
-      audio.compressor.knee.value = 18
-      audio.compressor.ratio.value = 12
-      audio.compressor.attack.value = 0.003
-      audio.compressor.release.value = 0.22
-      audio.masterGain.gain.value = 0.84
-      audio.masterGain.connect(audio.compressor)
-      audio.compressor.connect(audio.context.destination)
+      audio.masterGain.gain.value = usingCoarseInput() ? 0.96 : 0.84
+      audio.masterGain.connect(audio.context.destination)
     }
 
     if (audio.context.state !== "running") {
@@ -829,18 +821,18 @@
     const outputGain = audio.context.createGain()
     const lowpass = audio.context.createBiquadFilter()
     const highpass = audio.context.createBiquadFilter()
-    const frequencies = [740, 1040, 880]
+    const frequencies = usingCoarseInput() ? [392, 523, 330] : [740, 1040, 880]
 
     highpass.type = "highpass"
-    highpass.frequency.setValueAtTime(420, now)
+    highpass.frequency.setValueAtTime(usingCoarseInput() ? 130 : 420, now)
     highpass.Q.value = 0.8
     lowpass.type = "lowpass"
-    lowpass.frequency.setValueAtTime(4200, now)
+    lowpass.frequency.setValueAtTime(usingCoarseInput() ? 3200 : 4200, now)
     lowpass.Q.value = 0.7
 
     outputGain.gain.setValueAtTime(0.0001, now)
-    outputGain.gain.linearRampToValueAtTime(usingCoarseInput() ? 0.18 : 0.12, now + 0.02)
-    outputGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.82)
+    outputGain.gain.linearRampToValueAtTime(usingCoarseInput() ? 0.34 : 0.12, now + 0.02)
+    outputGain.gain.exponentialRampToValueAtTime(0.0001, now + (usingCoarseInput() ? 1.25 : 0.82))
 
     highpass.connect(lowpass)
     lowpass.connect(outputGain)
@@ -850,12 +842,18 @@
       const oscillator = audio.context.createOscillator()
       const oscillatorGain = audio.context.createGain()
       const startTime = now + index * 0.18
-      const endTime = startTime + 0.22
+      const endTime = startTime + (usingCoarseInput() ? 0.34 : 0.22)
 
-      oscillator.type = index === 1 ? "square" : "triangle"
+      oscillator.type = usingCoarseInput() ? (index === 1 ? "sawtooth" : "square") : index === 1 ? "square" : "triangle"
       oscillator.frequency.setValueAtTime(frequencies[index], startTime)
-      oscillator.frequency.exponentialRampToValueAtTime(frequencies[index] * 0.92, endTime)
-      oscillatorGain.gain.value = index === 1 ? 0.72 : 0.56
+      oscillator.frequency.exponentialRampToValueAtTime(frequencies[index] * 0.9, endTime)
+      oscillatorGain.gain.value = usingCoarseInput()
+        ? index === 1
+          ? 0.92
+          : 0.72
+        : index === 1
+          ? 0.72
+          : 0.56
       oscillator.connect(oscillatorGain)
       oscillatorGain.connect(highpass)
       oscillator.start(startTime)
@@ -891,18 +889,18 @@
     const lowpass = audio.context.createBiquadFilter()
     const highpass = audio.context.createBiquadFilter()
     const coarseMix = usingCoarseInput()
-    const frequencyScale = coarseMix ? 1.55 : 1
+    const frequencyScale = coarseMix ? 1.08 : 1
     const adjustedFrequency = frequency * frequencyScale
     const adjustedSlideTo = slideTo * frequencyScale
-    const adjustedGain = gain * (coarseMix ? 1.22 : 1)
-    const adjustedFilterFrequency = filterFrequency * (coarseMix ? 1.6 : 1)
+    const adjustedGain = gain * (coarseMix ? 1.85 : 1)
+    const adjustedFilterFrequency = filterFrequency * (coarseMix ? 1.12 : 1)
 
     highpass.type = "highpass"
-    highpass.frequency.setValueAtTime(coarseMix ? 320 : 180, now)
-    highpass.Q.value = coarseMix ? 0.9 : 0.7
+    highpass.frequency.setValueAtTime(coarseMix ? 140 : 180, now)
+    highpass.Q.value = coarseMix ? 0.72 : 0.7
     lowpass.type = "lowpass"
     lowpass.frequency.setValueAtTime(adjustedFilterFrequency, now)
-    lowpass.Q.value = coarseMix ? 1.1 : 0.8
+    lowpass.Q.value = coarseMix ? 0.84 : 0.8
 
     outputGain.gain.setValueAtTime(0.0001, now)
     outputGain.gain.linearRampToValueAtTime(adjustedGain, now + attack)
