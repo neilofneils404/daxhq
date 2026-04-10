@@ -185,7 +185,20 @@
     masterGain: null,
     compressor: null,
     unlockPromise: null,
-    primed: false
+    primed: false,
+    samplePrimed: false,
+    samples: {},
+    activeClips: new Set()
+  }
+  const SAMPLE_AUDIO_FILES = {
+    start: "./audio/start.wav",
+    deflect: "./audio/deflect.wav",
+    parry: "./audio/parry.wav",
+    damage: "./audio/damage.wav",
+    bossSpawn: "./audio/boss-spawn.wav",
+    bossDamage: "./audio/boss-damage.wav",
+    victory: "./audio/victory.wav",
+    gameOver: "./audio/game-over.wav"
   }
 
   const state = {
@@ -290,6 +303,104 @@
       window.matchMedia("(pointer: coarse)").matches ||
       navigator.maxTouchPoints > 0
     )
+  }
+
+  function shouldUseSampleAudio() {
+    return usingCoarseInput()
+  }
+
+  function ensureSampleBank() {
+    const keys = Object.keys(SAMPLE_AUDIO_FILES)
+
+    if (Object.keys(audio.samples).length === keys.length) {
+      return
+    }
+
+    for (const [name, src] of Object.entries(SAMPLE_AUDIO_FILES)) {
+      if (audio.samples[name]) {
+        continue
+      }
+
+      const clip = new Audio(src)
+      clip.preload = "auto"
+      clip.playsInline = true
+      clip.load()
+      audio.samples[name] = clip
+    }
+  }
+
+  async function primeSampleAudio() {
+    ensureSampleBank()
+
+    if (audio.samplePrimed) {
+      return true
+    }
+
+    const source = audio.samples.start
+
+    if (!source) {
+      return false
+    }
+
+    const clip = new Audio(source.src)
+    clip.preload = "auto"
+    clip.playsInline = true
+    clip.volume = 0.001
+
+    try {
+      const playPromise = clip.play()
+
+      if (playPromise && typeof playPromise.then === "function") {
+        await playPromise
+      }
+
+      clip.pause()
+      clip.currentTime = 0
+      audio.samplePrimed = true
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  function playSample(name, volume = 1) {
+    if (!audio.enabled) {
+      return false
+    }
+
+    ensureSampleBank()
+    const source = audio.samples[name]
+
+    if (!source) {
+      return false
+    }
+
+    const clip = new Audio(source.src)
+    clip.preload = "auto"
+    clip.playsInline = true
+    clip.volume = volume
+    audio.activeClips.add(clip)
+
+    const cleanup = () => {
+      audio.activeClips.delete(clip)
+    }
+
+    clip.addEventListener("ended", cleanup, { once: true })
+    clip.addEventListener("error", cleanup, { once: true })
+
+    const playPromise = clip.play()
+
+    if (playPromise && typeof playPromise.then === "function") {
+      playPromise
+        .then(() => {
+          audio.samplePrimed = true
+        })
+        .catch(() => {
+          cleanup()
+        })
+    }
+
+    return true
   }
 
   function markHudDirty() {
@@ -485,7 +596,7 @@
 
     audio.ready = audio.context.state === "running"
 
-    if (audio.ready && !audio.primed) {
+    if (audio.ready && !audio.primed && !shouldUseSampleAudio()) {
       playTone({
         frequency: usingCoarseInput() ? 720 : 520,
         slideTo: usingCoarseInput() ? 940 : 740,
@@ -570,6 +681,10 @@
   }
 
   function playStartSound() {
+    if (shouldUseSampleAudio() && playSample("start", 0.88)) {
+      return
+    }
+
     playTone({
       frequency: 300,
       slideTo: 430,
@@ -592,6 +707,10 @@
   }
 
   function playDeflectSound() {
+    if (shouldUseSampleAudio() && playSample("deflect", 0.76)) {
+      return
+    }
+
     playTone({
       frequency: rand(680, 920),
       slideTo: rand(360, 520),
@@ -604,6 +723,10 @@
   }
 
   function playParrySound() {
+    if (shouldUseSampleAudio() && playSample("parry", 0.82)) {
+      return
+    }
+
     playTone({
       frequency: rand(520, 760),
       slideTo: rand(260, 380),
@@ -616,6 +739,10 @@
   }
 
   function playDamageSound() {
+    if (shouldUseSampleAudio() && playSample("damage", 0.9)) {
+      return
+    }
+
     playTone({
       frequency: 240,
       slideTo: 120,
@@ -628,6 +755,10 @@
   }
 
   function playBossSpawnSound() {
+    if (shouldUseSampleAudio() && playSample("bossSpawn", 0.88)) {
+      return
+    }
+
     playTone({
       frequency: 180,
       slideTo: 460,
@@ -640,6 +771,10 @@
   }
 
   function playBossDamageSound() {
+    if (shouldUseSampleAudio() && playSample("bossDamage", 0.78)) {
+      return
+    }
+
     playTone({
       frequency: rand(340, 460),
       slideTo: rand(180, 240),
@@ -652,6 +787,10 @@
   }
 
   function playVictorySound() {
+    if (shouldUseSampleAudio() && playSample("victory", 0.9)) {
+      return
+    }
+
     playTone({
       frequency: 260,
       slideTo: 420,
@@ -674,6 +813,10 @@
   }
 
   function playGameOverSound() {
+    if (shouldUseSampleAudio() && playSample("gameOver", 0.94)) {
+      return
+    }
+
     playTone({
       frequency: 220,
       slideTo: 70,
@@ -2030,7 +2173,9 @@
   }
 
   async function startGame() {
-    const audioReadyPromise = audio.enabled ? ensureAudio() : Promise.resolve(false)
+    const audioReadyPromise = audio.enabled
+      ? Promise.all([ensureAudio(), primeSampleAudio()])
+      : Promise.resolve([false, false])
 
     resetPointer(state.pointer.targetX, state.pointer.targetY)
     state.mode = "playing"
@@ -2066,7 +2211,8 @@
     setLoadout(state.selectedLoadout)
     setPhaseLabel("Arena 01")
     showAnnouncement("Defense Grid", "Chamber Online", 1.1)
-    if (await audioReadyPromise) {
+    await audioReadyPromise
+    if (audio.enabled) {
       playStartSound()
     }
     markHudDirty()
@@ -2870,9 +3016,8 @@
     audio.enabled = !audio.enabled
 
     if (audio.enabled) {
-      if (await ensureAudio()) {
-        playStartSound()
-      }
+      await Promise.all([ensureAudio(), primeSampleAudio()])
+      playStartSound()
     } else {
       audio.ready = false
     }
@@ -2882,7 +3027,7 @@
 
   async function handleUserActivation() {
     if (audio.enabled) {
-      await ensureAudio()
+      await Promise.all([ensureAudio(), primeSampleAudio()])
     }
   }
 
