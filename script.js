@@ -23,6 +23,8 @@
   const startButton = document.getElementById("startButton")
   const restartButton = document.getElementById("restartButton")
   const soundToggle = document.getElementById("soundToggle")
+  const testSoundButton = document.getElementById("testSoundButton")
+  const audioDiagnostic = document.getElementById("audioDiagnostic")
   const loadoutOptions = Array.from(document.querySelectorAll("[data-loadout]"))
 
   const STORAGE_KEY = "daxhq-best-score"
@@ -320,6 +322,16 @@
     return usingCoarseInput()
   }
 
+  function setAudioDiagnostic(message = "", stateName = "") {
+    audioDiagnostic.textContent = message
+
+    if (stateName) {
+      audioDiagnostic.dataset.state = stateName
+    } else {
+      delete audioDiagnostic.dataset.state
+    }
+  }
+
   function ensureSampleBank() {
     const keys = Object.keys(SAMPLE_AUDIO_FILES)
 
@@ -420,8 +432,10 @@
       playPromise
         .then(() => {
           audio.samplePrimed = true
+          setAudioDiagnostic("Audio playback started.", "ok")
         })
         .catch(() => {
+          setAudioDiagnostic("Audio playback was blocked on this device.", "error")
           cleanup()
         })
     }
@@ -2198,7 +2212,7 @@
     }
   }
 
-  async function startGame() {
+  async function startGame({ playIntroSound = true } = {}) {
     const useSampleAudio = audio.enabled && shouldUseSampleAudio()
     const audioReadyPromise =
       audio.enabled && !useSampleAudio ? ensureAudio() : Promise.resolve(true)
@@ -2237,11 +2251,11 @@
     setLoadout(state.selectedLoadout)
     setPhaseLabel("Arena 01")
     showAnnouncement("Defense Grid", "Chamber Online", 1.1)
-    if (useSampleAudio) {
+    if (playIntroSound && useSampleAudio) {
       playStartSound()
     }
     const audioReady = await audioReadyPromise
-    if (audio.enabled && audioReady && !useSampleAudio) {
+    if (playIntroSound && audio.enabled && audioReady && !useSampleAudio) {
       playStartSound()
     }
     markHudDirty()
@@ -3047,7 +3061,8 @@
     }
 
     if (shouldUseSampleAudio()) {
-      primeSampleAudio()
+      ensureSampleBank()
+      return
     }
 
     void ensureAudio()
@@ -3061,9 +3076,11 @@
       if (!shouldUseSampleAudio()) {
         await ensureAudio()
       }
+      setAudioDiagnostic("")
       playStartSound()
     } else {
       audio.ready = false
+      setAudioDiagnostic("")
     }
 
     updateSoundLabel()
@@ -3091,14 +3108,31 @@
 
   startButton.addEventListener("click", () => {
     handleUserActivation()
-    void startGame()
+    const useSampleAudio = audio.enabled && shouldUseSampleAudio()
+
+    if (useSampleAudio) {
+      playStartSound()
+    }
+
+    void startGame({ playIntroSound: !useSampleAudio })
   })
   restartButton.addEventListener("click", () => {
     handleUserActivation()
-    void startGame()
+    const useSampleAudio = audio.enabled && shouldUseSampleAudio()
+
+    if (useSampleAudio) {
+      playStartSound()
+    }
+
+    void startGame({ playIntroSound: !useSampleAudio })
   })
   soundToggle.addEventListener("click", () => {
     void handleSoundToggle()
+  })
+  testSoundButton.addEventListener("click", () => {
+    handleUserActivation()
+    setAudioDiagnostic("Trying to play the start sound...", "")
+    playStartSound()
   })
   for (const option of loadoutOptions) {
     option.addEventListener("click", () => {
