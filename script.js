@@ -189,6 +189,7 @@
     unlockPromise: null,
     primed: false,
     samplePrimed: false,
+    sampleRack: null,
     samplePools: {},
     sampleIndexes: {},
     activeClips: new Set()
@@ -332,12 +333,34 @@
     }
   }
 
+  function ensureSampleRack() {
+    if (audio.sampleRack) {
+      return audio.sampleRack
+    }
+
+    const rack = document.createElement("div")
+    rack.setAttribute("aria-hidden", "true")
+    rack.style.position = "fixed"
+    rack.style.left = "-9999px"
+    rack.style.top = "0"
+    rack.style.width = "1px"
+    rack.style.height = "1px"
+    rack.style.opacity = "0.001"
+    rack.style.pointerEvents = "none"
+    rack.style.overflow = "hidden"
+    document.body.appendChild(rack)
+    audio.sampleRack = rack
+    return rack
+  }
+
   function ensureSampleBank() {
     const keys = Object.keys(SAMPLE_AUDIO_FILES)
 
     if (Object.keys(audio.samplePools).length === keys.length) {
       return
     }
+
+    const rack = ensureSampleRack()
 
     for (const [name, src] of Object.entries(SAMPLE_AUDIO_FILES)) {
       if (audio.samplePools[name]) {
@@ -350,10 +373,14 @@
         clip.src = src
         clip.preload = "auto"
         clip.playsInline = true
+        clip.defaultMuted = false
+        clip.muted = false
+        clip.volume = 1
         clip.setAttribute("playsinline", "true")
         clip.setAttribute("webkit-playsinline", "true")
-        clip.style.display = "none"
-        document.body.appendChild(clip)
+        clip.style.width = "1px"
+        clip.style.height = "1px"
+        rack.appendChild(clip)
         clip.load()
         return clip
       })
@@ -416,6 +443,12 @@
       clip.currentTime = 0
     } catch {}
 
+    if (clip.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+      clip.load()
+    }
+
+    clip.defaultMuted = false
+    clip.muted = false
     clip.volume = volume
     audio.activeClips.add(clip)
 
@@ -720,11 +753,11 @@
     }
   }
 
-  function playStartSound() {
-    if (shouldUseSampleAudio() && playSample("start", 0.88)) {
-      return
-    }
+  function shouldLayerMobileTone() {
+    return usingCoarseInput()
+  }
 
+  function playStartToneOnly() {
     playTone({
       frequency: 300,
       slideTo: 430,
@@ -746,11 +779,27 @@
     })
   }
 
-  function playDeflectSound() {
-    if (shouldUseSampleAudio() && playSample("deflect", 0.76)) {
+  function playStartSound() {
+    const samplePlayed = shouldUseSampleAudio() && playSample("start", 1)
+
+    if (shouldLayerMobileTone()) {
+      playStartToneOnly()
+
+      if (samplePlayed) {
+        return
+      }
+
       return
     }
 
+    if (samplePlayed) {
+      return
+    }
+
+    playStartToneOnly()
+  }
+
+  function playDeflectToneOnly() {
     playTone({
       frequency: rand(680, 920),
       slideTo: rand(360, 520),
@@ -762,11 +811,27 @@
     })
   }
 
-  function playParrySound() {
-    if (shouldUseSampleAudio() && playSample("parry", 0.82)) {
+  function playDeflectSound() {
+    const samplePlayed = shouldUseSampleAudio() && playSample("deflect", 0.8)
+
+    if (shouldLayerMobileTone()) {
+      playDeflectToneOnly()
+
+      if (samplePlayed) {
+        return
+      }
+
       return
     }
 
+    if (samplePlayed) {
+      return
+    }
+
+    playDeflectToneOnly()
+  }
+
+  function playParryToneOnly() {
     playTone({
       frequency: rand(520, 760),
       slideTo: rand(260, 380),
@@ -778,11 +843,27 @@
     })
   }
 
-  function playDamageSound() {
-    if (shouldUseSampleAudio() && playSample("damage", 0.9)) {
+  function playParrySound() {
+    const samplePlayed = shouldUseSampleAudio() && playSample("parry", 0.88)
+
+    if (shouldLayerMobileTone()) {
+      playParryToneOnly()
+
+      if (samplePlayed) {
+        return
+      }
+
       return
     }
 
+    if (samplePlayed) {
+      return
+    }
+
+    playParryToneOnly()
+  }
+
+  function playDamageToneOnly() {
     playTone({
       frequency: 240,
       slideTo: 120,
@@ -794,11 +875,27 @@
     })
   }
 
-  function playBossSpawnSound() {
-    if (shouldUseSampleAudio() && playSample("bossSpawn", 0.88)) {
+  function playDamageSound() {
+    const samplePlayed = shouldUseSampleAudio() && playSample("damage", 0.96)
+
+    if (shouldLayerMobileTone()) {
+      playDamageToneOnly()
+
+      if (samplePlayed) {
+        return
+      }
+
       return
     }
 
+    if (samplePlayed) {
+      return
+    }
+
+    playDamageToneOnly()
+  }
+
+  function playBossSpawnToneOnly() {
     playTone({
       frequency: 180,
       slideTo: 460,
@@ -810,11 +907,27 @@
     })
   }
 
-  function playBossDamageSound() {
-    if (shouldUseSampleAudio() && playSample("bossDamage", 0.78)) {
+  function playBossSpawnSound() {
+    const samplePlayed = shouldUseSampleAudio() && playSample("bossSpawn", 0.96)
+
+    if (shouldLayerMobileTone()) {
+      playBossSpawnToneOnly()
+
+      if (samplePlayed) {
+        return
+      }
+
       return
     }
 
+    if (samplePlayed) {
+      return
+    }
+
+    playBossSpawnToneOnly()
+  }
+
+  function playBossDamageToneOnly() {
     playTone({
       frequency: rand(340, 460),
       slideTo: rand(180, 240),
@@ -826,11 +939,27 @@
     })
   }
 
-  function playVictorySound() {
-    if (shouldUseSampleAudio() && playSample("victory", 0.9)) {
+  function playBossDamageSound() {
+    const samplePlayed = shouldUseSampleAudio() && playSample("bossDamage", 0.88)
+
+    if (shouldLayerMobileTone()) {
+      playBossDamageToneOnly()
+
+      if (samplePlayed) {
+        return
+      }
+
       return
     }
 
+    if (samplePlayed) {
+      return
+    }
+
+    playBossDamageToneOnly()
+  }
+
+  function playVictoryToneOnly() {
     playTone({
       frequency: 260,
       slideTo: 420,
@@ -852,11 +981,27 @@
     })
   }
 
-  function playGameOverSound() {
-    if (shouldUseSampleAudio() && playSample("gameOver", 0.94)) {
+  function playVictorySound() {
+    const samplePlayed = shouldUseSampleAudio() && playSample("victory", 1)
+
+    if (shouldLayerMobileTone()) {
+      playVictoryToneOnly()
+
+      if (samplePlayed) {
+        return
+      }
+
       return
     }
 
+    if (samplePlayed) {
+      return
+    }
+
+    playVictoryToneOnly()
+  }
+
+  function playGameOverToneOnly() {
     playTone({
       frequency: 220,
       slideTo: 70,
@@ -866,6 +1011,26 @@
       filterFrequency: 1800,
       voices: [1, 0.5]
     })
+  }
+
+  function playGameOverSound() {
+    const samplePlayed = shouldUseSampleAudio() && playSample("gameOver", 1)
+
+    if (shouldLayerMobileTone()) {
+      playGameOverToneOnly()
+
+      if (samplePlayed) {
+        return
+      }
+
+      return
+    }
+
+    if (samplePlayed) {
+      return
+    }
+
+    playGameOverToneOnly()
   }
 
   function cross(ax, ay, bx, by) {
@@ -2214,8 +2379,9 @@
 
   async function startGame({ playIntroSound = true } = {}) {
     const useSampleAudio = audio.enabled && shouldUseSampleAudio()
-    const audioReadyPromise =
-      audio.enabled && !useSampleAudio ? ensureAudio() : Promise.resolve(true)
+    const audioReadyPromise = audio.enabled
+      ? handleImmediateAudioActivation()
+      : Promise.resolve(false)
 
     resetPointer(state.pointer.targetX, state.pointer.targetY)
     state.mode = "playing"
@@ -3057,25 +3223,19 @@
 
   function handleImmediateAudioActivation() {
     if (!audio.enabled) {
-      return
+      return Promise.resolve(false)
     }
 
-    if (shouldUseSampleAudio()) {
-      ensureSampleBank()
-      return
-    }
-
-    void ensureAudio()
+    ensureSampleBank()
+    primeSampleAudio()
+    return ensureAudio()
   }
 
   async function handleSoundToggle() {
     audio.enabled = !audio.enabled
 
     if (audio.enabled) {
-      handleImmediateAudioActivation()
-      if (!shouldUseSampleAudio()) {
-        await ensureAudio()
-      }
+      await handleImmediateAudioActivation()
       setAudioDiagnostic("")
       playStartSound()
     } else {
@@ -3088,7 +3248,30 @@
 
   function handleUserActivation() {
     if (audio.enabled) {
-      handleImmediateAudioActivation()
+      void handleImmediateAudioActivation()
+    }
+  }
+
+  async function handleTestSound() {
+    if (!audio.enabled) {
+      setAudioDiagnostic("Sound is turned off right now.", "error")
+      return
+    }
+
+    setAudioDiagnostic("Trying to play the start sound...", "")
+
+    if (shouldUseSampleAudio()) {
+      playSample("start", 1)
+    }
+
+    const audioReady = await handleImmediateAudioActivation()
+
+    if (audioReady) {
+      playStartToneOnly()
+    }
+
+    if (!audioReady && !shouldUseSampleAudio()) {
+      setAudioDiagnostic("Audio playback was blocked on this device.", "error")
     }
   }
 
@@ -3130,9 +3313,7 @@
     void handleSoundToggle()
   })
   testSoundButton.addEventListener("click", () => {
-    handleUserActivation()
-    setAudioDiagnostic("Trying to play the start sound...", "")
-    playStartSound()
+    void handleTestSound()
   })
   for (const option of loadoutOptions) {
     option.addEventListener("click", () => {
@@ -3272,5 +3453,12 @@
   setLoadout(state.selectedLoadout)
   updateSoundLabel()
   updateHud(true)
+
+  window.setTimeout(() => {
+    if (audio.enabled) {
+      ensureSampleBank()
+    }
+  }, 0)
+
   requestAnimationFrame(frame)
 })()
