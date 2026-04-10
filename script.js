@@ -187,7 +187,8 @@
     unlockPromise: null,
     primed: false,
     samplePrimed: false,
-    samples: {},
+    samplePools: {},
+    sampleIndexes: {},
     activeClips: new Set()
   }
   const SAMPLE_AUDIO_FILES = {
@@ -199,6 +200,16 @@
     bossDamage: "./audio/boss-damage.wav",
     victory: "./audio/victory.wav",
     gameOver: "./audio/game-over.wav"
+  }
+  const SAMPLE_POOL_SIZES = {
+    start: 2,
+    deflect: 4,
+    parry: 4,
+    damage: 3,
+    bossSpawn: 2,
+    bossDamage: 3,
+    victory: 2,
+    gameOver: 2
   }
 
   const state = {
@@ -312,55 +323,63 @@
   function ensureSampleBank() {
     const keys = Object.keys(SAMPLE_AUDIO_FILES)
 
-    if (Object.keys(audio.samples).length === keys.length) {
+    if (Object.keys(audio.samplePools).length === keys.length) {
       return
     }
 
     for (const [name, src] of Object.entries(SAMPLE_AUDIO_FILES)) {
-      if (audio.samples[name]) {
+      if (audio.samplePools[name]) {
         continue
       }
 
-      const clip = new Audio(src)
-      clip.preload = "auto"
-      clip.playsInline = true
-      clip.load()
-      audio.samples[name] = clip
+      const size = SAMPLE_POOL_SIZES[name] || 2
+      audio.samplePools[name] = Array.from({ length: size }, () => {
+        const clip = document.createElement("audio")
+        clip.src = src
+        clip.preload = "auto"
+        clip.playsInline = true
+        clip.setAttribute("playsinline", "true")
+        clip.setAttribute("webkit-playsinline", "true")
+        clip.style.display = "none"
+        document.body.appendChild(clip)
+        clip.load()
+        return clip
+      })
+      audio.sampleIndexes[name] = 0
     }
   }
 
-  async function primeSampleAudio() {
+  function primeSampleAudio() {
     ensureSampleBank()
 
     if (audio.samplePrimed) {
       return true
     }
 
-    const source = audio.samples.start
+    for (const pool of Object.values(audio.samplePools)) {
+      for (const clip of pool) {
+        clip.muted = true
 
-    if (!source) {
-      return false
-    }
+        try {
+          const playPromise = clip.play()
 
-    const clip = new Audio(source.src)
-    clip.preload = "auto"
-    clip.playsInline = true
-    clip.volume = 0.001
+          if (playPromise && typeof playPromise.then === "function") {
+            playPromise.catch(() => {})
+          }
+        } catch {}
 
-    try {
-      const playPromise = clip.play()
+        clip.pause()
 
-      if (playPromise && typeof playPromise.then === "function") {
-        await playPromise
+        try {
+          clip.currentTime = 0
+        } catch {}
+
+        clip.muted = false
       }
-
-      clip.pause()
-      clip.currentTime = 0
-      audio.samplePrimed = true
-      return true
-    } catch {
-      return false
     }
+
+    audio.samplePrimed = true
+    return true
   }
 
   function playSample(name, volume = 1) {
@@ -369,15 +388,22 @@
     }
 
     ensureSampleBank()
-    const source = audio.samples[name]
+    const pool = audio.samplePools[name]
 
-    if (!source) {
+    if (!pool || pool.length === 0) {
       return false
     }
 
-    const clip = new Audio(source.src)
-    clip.preload = "auto"
-    clip.playsInline = true
+    const index = audio.sampleIndexes[name] || 0
+    const clip = pool[index]
+    audio.sampleIndexes[name] = (index + 1) % pool.length
+
+    clip.pause()
+
+    try {
+      clip.currentTime = 0
+    } catch {}
+
     clip.volume = volume
     audio.activeClips.add(clip)
 
@@ -2173,9 +2199,8 @@
   }
 
   async function startGame() {
-    const audioReadyPromise = audio.enabled
-      ? Promise.all([ensureAudio(), primeSampleAudio()])
-      : Promise.resolve([false, false])
+    const audioReadyPromise =
+      audio.enabled && !shouldUseSampleAudio() ? ensureAudio() : Promise.resolve(true)
 
     resetPointer(state.pointer.targetX, state.pointer.targetY)
     state.mode = "playing"
@@ -2211,8 +2236,8 @@
     setLoadout(state.selectedLoadout)
     setPhaseLabel("Arena 01")
     showAnnouncement("Defense Grid", "Chamber Online", 1.1)
-    await audioReadyPromise
-    if (audio.enabled) {
+    const audioReady = await audioReadyPromise
+    if (audio.enabled && audioReady) {
       playStartSound()
     }
     markHudDirty()
@@ -3012,11 +3037,26 @@
     state.pointer.targetY = event.clientY
   }
 
+  function handleImmediateAudioActivation() {
+    if (!audio.enabled) {
+      return
+    }
+
+    if (shouldUseSampleAudio()) {
+      primeSampleAudio()
+    }
+
+    void ensureAudio()
+  }
+
   async function handleSoundToggle() {
     audio.enabled = !audio.enabled
 
     if (audio.enabled) {
-      await Promise.all([ensureAudio(), primeSampleAudio()])
+      handleImmediateAudioActivation()
+      if (!shouldUseSampleAudio()) {
+        await ensureAudio()
+      }
       playStartSound()
     } else {
       audio.ready = false
@@ -3025,9 +3065,9 @@
     updateSoundLabel()
   }
 
-  async function handleUserActivation() {
+  function handleUserActivation() {
     if (audio.enabled) {
-      await Promise.all([ensureAudio(), primeSampleAudio()])
+      handleImmediateAudioActivation()
     }
   }
 
@@ -3035,20 +3075,22 @@
   window.addEventListener("pointermove", handlePointerMove)
   window.addEventListener("pointerdown", handlePointerMove)
   window.addEventListener("pointerdown", () => {
-    void handleUserActivation()
+    handleUserActivation()
   }, { passive: true })
   window.addEventListener("touchstart", () => {
     state.pointer.pointerType = "touch"
-    void handleUserActivation()
+    handleUserActivation()
   }, { passive: true })
   window.addEventListener("keydown", () => {
-    void handleUserActivation()
+    handleUserActivation()
   })
 
   startButton.addEventListener("click", () => {
+    handleUserActivation()
     void startGame()
   })
   restartButton.addEventListener("click", () => {
+    handleUserActivation()
     void startGame()
   })
   soundToggle.addEventListener("click", () => {
