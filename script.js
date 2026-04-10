@@ -28,7 +28,7 @@
   const loadoutOptions = Array.from(document.querySelectorAll("[data-loadout]"))
 
   const STORAGE_KEY = "daxhq-best-score"
-  const FIRST_BOSS_SCORE = 420
+  const FIRST_BOSS_SCORE = 540
   const BOSS_VARIANTS = [
     {
       name: "Rift Warden",
@@ -225,9 +225,9 @@
     lastTime: 0,
     titleElapsed: 0,
     elapsed: 0,
-    spawnTimer: 0.55,
-    slashTimer: 1.7,
-    mineTimer: 3.2,
+    spawnTimer: 0.9,
+    slashTimer: 2.6,
+    mineTimer: 4.8,
     bossIntroTimer: 0,
     cooldownTimer: 0,
     score: 0,
@@ -307,10 +307,10 @@
   }
 
   function getArenaRamp() {
-    const timeRamp = clamp((state.elapsed - 8) / 72, 0, 1)
-    const bossRamp = clamp(state.bossesDefeated / 4, 0, 1)
+    const timeRamp = clamp((state.elapsed - 18) / 116, 0, 1)
+    const bossRamp = clamp(state.bossesDefeated / 5, 0, 1)
 
-    return clamp(timeRamp * 0.72 + bossRamp * 0.45, 0, 1)
+    return clamp(timeRamp * 0.6 + bossRamp * 0.34, 0, 1)
   }
 
   function usingCoarseInput() {
@@ -322,7 +322,7 @@
   }
 
   function shouldUseSampleAudio() {
-    return usingCoarseInput()
+    return false
   }
 
   function setAudioDiagnostic(message = "", stateName = "") {
@@ -778,7 +778,7 @@
       audio.compressor.ratio.value = 12
       audio.compressor.attack.value = 0.003
       audio.compressor.release.value = 0.22
-      audio.masterGain.gain.value = 0.72
+      audio.masterGain.gain.value = 0.84
       audio.masterGain.connect(audio.compressor)
       audio.compressor.connect(audio.context.destination)
     }
@@ -809,10 +809,6 @@
       gain.connect(audio.masterGain)
       source.start()
       audio.primed = true
-    }
-
-    if (audio.ready) {
-      void ensureDecodedSampleBank()
     }
 
     updateSoundLabel()
@@ -1482,7 +1478,7 @@
     const origin = randomPerimeterPoint(0.72)
     const aimAngle = rand(0, TWO_PI)
     const aimRadius = rand(0, state.center.radius * 0.68)
-    const heavy = Math.random() < 0.22
+    const heavy = Math.random() < 0.16
     const ramp = getArenaRamp()
 
     createBolt({
@@ -1490,7 +1486,7 @@
       y: origin.y,
       targetX: state.center.x + Math.cos(aimAngle) * aimRadius,
       targetY: state.center.y + Math.sin(aimAngle) * aimRadius,
-      speed: rand(248, 320) + ramp * 138 + state.combo * 1.3 + (heavy ? 42 : 0),
+      speed: rand(214, 282) + ramp * 116 + state.combo * 0.95 + (heavy ? 28 : 0),
       heavy,
       owner: "raider"
     })
@@ -1506,7 +1502,7 @@
 
   function spawnWave() {
     const ramp = getArenaRamp()
-    const burstChance = mix(0.05, 0.34, ramp)
+    const burstChance = mix(0.03, 0.26, ramp)
     let boltsThisWave = 1 + (Math.random() < burstChance ? 1 : 0)
 
     if (ramp > 0.62 && Math.random() < burstChance * 0.42) {
@@ -1527,10 +1523,10 @@
     const dy = state.center.y - origin.y
     const distance = Math.hypot(dx, dy) || 1
     const speed =
-      rand(54, 82) + clamp(state.elapsed * 0.4, 0, 18) + (options.speedBonus || 0)
+      rand(44, 70) + clamp(state.elapsed * 0.28, 0, 14) + (options.speedBonus || 0)
     const color = options.color || "255, 166, 82"
     const radius = options.radius || rand(16, 21)
-    const damage = options.damage || 18
+    const damage = options.damage || 14
     const life = options.life || rand(9, 12)
 
     state.mines.push({
@@ -1626,10 +1622,10 @@
       targetY: state.center.y + Math.sin(targetAngle) * targetRadius,
       owner: "raider",
       width: rand(14, 18),
-      damage: 13,
+      damage: 10,
       scoreValue: 30,
-      telegraphDuration: rand(0.7, 0.94),
-      activeDuration: rand(0.22, 0.29),
+      telegraphDuration: rand(0.82, 1.08),
+      activeDuration: rand(0.24, 0.31),
       fadeDuration: 0.28,
       sweep: rand(0.84, 1.14) * (Math.random() < 0.5 ? -1 : 1),
       lengthExtra: rand(68, 104),
@@ -1664,7 +1660,7 @@
     const variant = getBossVariant(level)
     const cycle = getBossCycle(level)
     const rank = clamp((level - 1) / 8, 0, 1)
-    const maxHealth = 116 + level * 58 + cycle * 18
+    const maxHealth = 96 + level * 46 + cycle * 14
 
     state.boss = {
       level,
@@ -1677,16 +1673,16 @@
       health: maxHealth,
       maxHealth,
       guardHits: 0,
-      guardNeeded: variant.guardNeeded + cycle,
+      guardNeeded: Math.max(2, variant.guardNeeded - 1 + cycle),
       vulnerableTimer: 0,
       guardCooldown: 0,
       damageCooldown: 0,
       pressureTimer: 0,
       pressureCooldown: 0,
       phase: "enter",
-      volleyTimer: mix(1.48, 1.08, rank),
-      slashTimer: mix(2.7, 2.05, rank),
-      specialTimer: mix(6.2, 3.8, rank),
+      volleyTimer: mix(1.72, 1.18, rank),
+      slashTimer: mix(3.05, 2.18, rank),
+      specialTimer: mix(6.8, 4.4, rank),
       rage: 0,
       moveSeed: rand(0, TWO_PI),
       hitFlash: 0,
@@ -1702,7 +1698,7 @@
       return
     }
 
-    state.boss.vulnerableTimer = Math.max(1.8, 2.55 - (state.boss.level - 1) * 0.08)
+    state.boss.vulnerableTimer = Math.max(2.2, 3 - (state.boss.level - 1) * 0.06)
     state.boss.guardHits = 0
     state.boss.guardCooldown = 0.2
     state.boss.pressureTimer = 0
@@ -1735,7 +1731,7 @@
     }
 
     state.boss.guardHits = clamp(state.boss.guardHits + amount, 0, state.boss.guardNeeded)
-    state.boss.guardCooldown = 0.26
+    state.boss.guardCooldown = 0.22
     state.boss.hitFlash = 0.65
     spawnSparks(x, y, 12, "player")
     spawnRing(x, y, {
@@ -1770,7 +1766,7 @@
     }
 
     state.boss.health = clamp(state.boss.health - amount, 0, state.boss.maxHealth)
-    state.boss.damageCooldown = Math.min(0.12, 0.07 + (state.boss.level - 1) * 0.01)
+    state.boss.damageCooldown = Math.min(0.09, 0.05 + (state.boss.level - 1) * 0.008)
     state.boss.hitFlash = 1
     state.pulse = 1
     state.shake = Math.min(22, state.shake + 5)
@@ -1805,11 +1801,11 @@
     boss.vulnerableTimer = 0
     state.bossesDefeated += 1
     state.bossLevel += 1
-    state.nextBossScore += 560 + boss.level * 120
+    state.nextBossScore += 720 + boss.level * 130
     state.cooldownTimer = 2.5
-    state.spawnTimer = 0.58
-    state.slashTimer = 2.25
-    state.mineTimer = 3.4
+    state.spawnTimer = 0.88
+    state.slashTimer = 3.4
+    state.mineTimer = 4.9
 
     cleanupHostileThreats(true)
     addScore(240 + boss.level * 80)
@@ -2090,7 +2086,7 @@
     }
 
     const pressureDistance = Math.hypot(state.pointer.x - boss.x, state.pointer.y - boss.y)
-    const pressureEnabled = boss.level >= 2
+    const pressureEnabled = boss.level >= 3
 
     if (pressureEnabled && boss.vulnerableTimer <= 0 && pressureDistance < boss.radius + 84) {
       boss.pressureTimer += dt
@@ -2098,8 +2094,8 @@
       boss.pressureTimer = Math.max(0, boss.pressureTimer - dt * 2)
     }
 
-    if (pressureEnabled && boss.pressureCooldown <= 0 && boss.pressureTimer > 0.78 - bossRamp * 0.18) {
-      boss.pressureCooldown = 1.15
+    if (pressureEnabled && boss.pressureCooldown <= 0 && boss.pressureTimer > 0.96 - bossRamp * 0.12) {
+      boss.pressureCooldown = 1.35
       boss.pressureTimer = 0
       state.combo = 0
       spawnRing(boss.x, boss.y, {
@@ -2109,7 +2105,7 @@
         growth: 206,
         lineWidth: 3.4
       })
-      damageCore(5 + boss.level * 1.1, state.pointer.x, state.pointer.y)
+      damageCore(3 + boss.level * 0.75, state.pointer.x, state.pointer.y)
       return
     }
 
@@ -2119,17 +2115,17 @@
 
     if (boss.vulnerableTimer <= 0 && boss.volleyTimer <= 0) {
       spawnBossVolley()
-      boss.volleyTimer = Math.max(0.78, 1.72 - boss.level * 0.05 - boss.rage * 0.38) * rand(0.94, 1.16)
+      boss.volleyTimer = Math.max(0.94, 1.96 - boss.level * 0.04 - boss.rage * 0.3) * rand(0.94, 1.16)
     }
 
     if (boss.vulnerableTimer <= 0 && boss.slashTimer <= 0) {
       spawnBossSlashCombo()
-      boss.slashTimer = Math.max(1.18, 2.7 - boss.level * 0.07 - boss.rage * 0.7) * rand(0.9, 1.14)
+      boss.slashTimer = Math.max(1.42, 3 - boss.level * 0.05 - boss.rage * 0.5) * rand(0.9, 1.14)
     }
 
     if (boss.vulnerableTimer <= 0 && boss.specialTimer <= 0) {
       spawnBossSpecial()
-      boss.specialTimer = Math.max(3.4, 5.8 - boss.level * 0.11 - boss.rage * 0.7) * rand(0.96, 1.12)
+      boss.specialTimer = Math.max(4, 6.3 - boss.level * 0.09 - boss.rage * 0.54) * rand(0.96, 1.12)
     }
 
     markHudDirty()
@@ -2252,7 +2248,7 @@
   function tryDeflectBolt(bolt) {
     const coarseInput = usingCoarseInput()
 
-    if (state.pointer.speed < (coarseInput ? 235 : 180) || state.pointer.hitCooldown > 0) {
+    if (state.pointer.speed < (coarseInput ? 205 : 165) || state.pointer.hitCooldown > 0) {
       return null
     }
 
@@ -2268,7 +2264,7 @@
         segment.by
       )
 
-      if (distance < bolt.radius + (coarseInput ? 11 : 18) + state.pointer.power * (coarseInput ? 5 : 8)) {
+      if (distance < bolt.radius + (coarseInput ? 14 : 21) + state.pointer.power * (coarseInput ? 7 : 10)) {
         return segment
       }
     }
@@ -2425,7 +2421,7 @@
 
     if (
       !state.playerBlade ||
-      state.pointer.speed < (coarseInput ? 248 : 190) ||
+      state.pointer.speed < (coarseInput ? 220 : 178) ||
       state.pointer.hitCooldown > 0
     ) {
       return null
@@ -2460,7 +2456,7 @@
       }
     }
 
-    if (bestDistance <= width + (coarseInput ? 11 : 18) + state.pointer.power * (coarseInput ? 8 : 12)) {
+    if (bestDistance <= width + (coarseInput ? 15 : 22) + state.pointer.power * (coarseInput ? 10 : 14)) {
       return bestPoint
     }
 
@@ -2570,9 +2566,9 @@
     resetPointer(state.pointer.targetX, state.pointer.targetY)
     state.mode = "playing"
     state.elapsed = 0
-    state.spawnTimer = 0.82
-    state.slashTimer = 3.25
-    state.mineTimer = 5.8
+    state.spawnTimer = 1
+    state.slashTimer = 4.2
+    state.mineTimer = 7.2
     state.bossIntroTimer = 0
     state.cooldownTimer = 0
     state.score = 0
@@ -2670,8 +2666,8 @@
 
     if (!state.boss && state.bossIntroTimer <= 0 && state.cooldownTimer <= 0) {
       const ramp = getArenaRamp()
-      const allowSlashes = state.bossesDefeated > 0 || state.elapsed > 9
-      const allowMines = state.bossesDefeated > 0 || state.elapsed > 26
+      const allowSlashes = state.bossesDefeated > 0 || state.elapsed > 14
+      const allowMines = state.bossesDefeated > 0 || state.elapsed > 34
 
       state.spawnTimer -= dt
       state.slashTimer -= dt
@@ -2679,16 +2675,16 @@
 
       if (state.spawnTimer <= 0) {
         spawnWave()
-        if (ramp > 0.34 && Math.random() < mix(0.05, 0.24, ramp)) {
+        if (ramp > 0.42 && Math.random() < mix(0.04, 0.2, ramp)) {
           spawnAmbientBolt()
         }
-        state.spawnTimer = mix(1.04, 0.46, ramp) * rand(0.86, 1.14)
+        state.spawnTimer = mix(1.18, 0.56, ramp) * rand(0.88, 1.16)
       }
 
       if (allowSlashes && state.slashTimer <= 0) {
         let slashCount = 1
 
-        if (ramp > 0.58 && Math.random() < mix(0.12, 0.56, ramp)) {
+        if (ramp > 0.66 && Math.random() < mix(0.1, 0.46, ramp)) {
           slashCount += 1
         }
 
@@ -2696,13 +2692,13 @@
           spawnRaiderSlash()
         }
 
-        state.slashTimer = mix(3.25, 1.28, ramp) * rand(0.9, 1.14)
+        state.slashTimer = mix(4.1, 1.75, ramp) * rand(0.92, 1.16)
       }
 
       if (allowMines && state.mineTimer <= 0) {
         let mineCount = 1
 
-        if (ramp > 0.76 && Math.random() < mix(0.08, 0.34, ramp)) {
+        if (ramp > 0.82 && Math.random() < mix(0.06, 0.28, ramp)) {
           mineCount += 1
         }
 
@@ -2710,7 +2706,7 @@
           spawnMine()
         }
 
-        state.mineTimer = mix(5.5, 2.65, ramp) * rand(0.92, 1.16)
+        state.mineTimer = mix(6.4, 3.2, ramp) * rand(0.94, 1.18)
       }
     }
 
@@ -3410,8 +3406,6 @@
       return Promise.resolve(false)
     }
 
-    ensureSampleBank()
-    primeSampleAudio()
     return ensureAudio()
   }
 
@@ -3445,12 +3439,9 @@
     setAudioDiagnostic("Trying to play the start sound...", "")
 
     const audioReady = await handleImmediateAudioActivation()
-    const sampleStarted = shouldUseSampleAudio()
-      ? playBufferedSample("start", 1) || playFreshSample("start", 1)
-      : false
     const toneStarted = audioReady ? playDiagnosticTone() : false
 
-    if (!sampleStarted && !toneStarted) {
+    if (!toneStarted) {
       setAudioDiagnostic("Audio playback was blocked on this device.", "error")
     }
   }
@@ -3462,6 +3453,10 @@
     handleUserActivation()
   }, { passive: true })
   window.addEventListener("touchstart", () => {
+    state.pointer.pointerType = "touch"
+    handleUserActivation()
+  }, { passive: true })
+  window.addEventListener("touchmove", () => {
     state.pointer.pointerType = "touch"
     handleUserActivation()
   }, { passive: true })
@@ -3633,12 +3628,5 @@
   setLoadout(state.selectedLoadout)
   updateSoundLabel()
   updateHud(true)
-
-  window.setTimeout(() => {
-    if (audio.enabled) {
-      ensureSampleBank()
-    }
-  }, 0)
-
   requestAnimationFrame(frame)
 })()
