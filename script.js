@@ -188,6 +188,8 @@
     compressor: null,
     unlockPromise: null,
     primed: false,
+    bufferWarmPromise: null,
+    sampleBuffers: {},
     samplePrimed: false,
     sampleRack: null,
     samplePools: {},
@@ -509,6 +511,100 @@
     return true
   }
 
+  async function ensureDecodedSampleBank() {
+    if (!audio.context || !audio.enabled) {
+      return false
+    }
+
+    const keys = Object.keys(SAMPLE_AUDIO_FILES)
+
+    if (keys.every((key) => audio.sampleBuffers[key])) {
+      return true
+    }
+
+    if (!audio.bufferWarmPromise) {
+      audio.bufferWarmPromise = Promise.all(
+        Object.entries(SAMPLE_AUDIO_FILES).map(async ([name, src]) => {
+          if (audio.sampleBuffers[name]) {
+            return
+          }
+
+          const response = await fetch(src)
+
+          if (!response.ok) {
+            throw new Error(`failed to load ${name}`)
+          }
+
+          const arrayBuffer = await response.arrayBuffer()
+          const decoded = await audio.context.decodeAudioData(arrayBuffer.slice(0))
+          audio.sampleBuffers[name] = decoded
+        })
+      )
+        .then(() => true)
+        .catch((error) => {
+          console.warn("DAX HQ sample decode failed", error)
+          return false
+        })
+        .finally(() => {
+          audio.bufferWarmPromise = null
+        })
+    }
+
+    return audio.bufferWarmPromise
+  }
+
+  function playBufferedSample(name, volume = 1) {
+    if (!audio.enabled || !audio.context || !audio.masterGain) {
+      return false
+    }
+
+    if (audio.context.state !== "running") {
+      audio.ready = false
+      return false
+    }
+
+    const buffer = audio.sampleBuffers[name]
+
+    if (!buffer) {
+      return false
+    }
+
+    const source = audio.context.createBufferSource()
+    const gain = audio.context.createGain()
+    const highpass = audio.context.createBiquadFilter()
+    const lowpass = audio.context.createBiquadFilter()
+    const coarseMix = usingCoarseInput()
+
+    source.buffer = buffer
+    source.playbackRate.value = coarseMix ? 1.04 : 1
+
+    highpass.type = "highpass"
+    highpass.frequency.setValueAtTime(coarseMix ? 220 : 140, audio.context.currentTime)
+    highpass.Q.value = 0.6
+
+    lowpass.type = "lowpass"
+    lowpass.frequency.setValueAtTime(coarseMix ? 5200 : 4600, audio.context.currentTime)
+    lowpass.Q.value = coarseMix ? 0.9 : 0.7
+
+    gain.gain.value = volume * (coarseMix ? 1.2 : 1)
+
+    source.connect(highpass)
+    highpass.connect(lowpass)
+    lowpass.connect(gain)
+    gain.connect(audio.masterGain)
+    source.start()
+
+    return true
+  }
+
+  function playEffectSample(name, volume = 1) {
+    if (playBufferedSample(name, volume)) {
+      return true
+    }
+
+    return playSample(name, volume)
+  }
+
   function markHudDirty() {
     state.hudDirty = true
   }
@@ -715,6 +811,10 @@
       audio.primed = true
     }
 
+    if (audio.ready) {
+      void ensureDecodedSampleBank()
+    }
+
     updateSoundLabel()
     return audio.ready
   }
@@ -864,7 +964,7 @@
   }
 
   function playStartSound() {
-    const samplePlayed = shouldUseSampleAudio() && playSample("start", 1)
+    const samplePlayed = shouldUseSampleAudio() && playEffectSample("start", 1)
 
     if (shouldLayerMobileTone()) {
       playStartToneOnly()
@@ -896,7 +996,7 @@
   }
 
   function playDeflectSound() {
-    const samplePlayed = shouldUseSampleAudio() && playSample("deflect", 0.8)
+    const samplePlayed = shouldUseSampleAudio() && playEffectSample("deflect", 0.8)
 
     if (shouldLayerMobileTone()) {
       playDeflectToneOnly()
@@ -928,7 +1028,7 @@
   }
 
   function playParrySound() {
-    const samplePlayed = shouldUseSampleAudio() && playSample("parry", 0.88)
+    const samplePlayed = shouldUseSampleAudio() && playEffectSample("parry", 0.88)
 
     if (shouldLayerMobileTone()) {
       playParryToneOnly()
@@ -960,7 +1060,7 @@
   }
 
   function playDamageSound() {
-    const samplePlayed = shouldUseSampleAudio() && playSample("damage", 0.96)
+    const samplePlayed = shouldUseSampleAudio() && playEffectSample("damage", 0.96)
 
     if (shouldLayerMobileTone()) {
       playDamageToneOnly()
@@ -992,7 +1092,7 @@
   }
 
   function playBossSpawnSound() {
-    const samplePlayed = shouldUseSampleAudio() && playSample("bossSpawn", 0.96)
+    const samplePlayed = shouldUseSampleAudio() && playEffectSample("bossSpawn", 0.96)
 
     if (shouldLayerMobileTone()) {
       playBossSpawnToneOnly()
@@ -1024,7 +1124,7 @@
   }
 
   function playBossDamageSound() {
-    const samplePlayed = shouldUseSampleAudio() && playSample("bossDamage", 0.88)
+    const samplePlayed = shouldUseSampleAudio() && playEffectSample("bossDamage", 0.88)
 
     if (shouldLayerMobileTone()) {
       playBossDamageToneOnly()
@@ -1066,7 +1166,7 @@
   }
 
   function playVictorySound() {
-    const samplePlayed = shouldUseSampleAudio() && playSample("victory", 1)
+    const samplePlayed = shouldUseSampleAudio() && playEffectSample("victory", 1)
 
     if (shouldLayerMobileTone()) {
       playVictoryToneOnly()
@@ -1098,7 +1198,7 @@
   }
 
   function playGameOverSound() {
-    const samplePlayed = shouldUseSampleAudio() && playSample("gameOver", 1)
+    const samplePlayed = shouldUseSampleAudio() && playEffectSample("gameOver", 1)
 
     if (shouldLayerMobileTone()) {
       playGameOverToneOnly()
@@ -3345,7 +3445,9 @@
     setAudioDiagnostic("Trying to play the start sound...", "")
 
     const audioReady = await handleImmediateAudioActivation()
-    const sampleStarted = shouldUseSampleAudio() ? playFreshSample("start", 1) : false
+    const sampleStarted = shouldUseSampleAudio()
+      ? playBufferedSample("start", 1) || playFreshSample("start", 1)
+      : false
     const toneStarted = audioReady ? playDiagnosticTone() : false
 
     if (!sampleStarted && !toneStarted) {
