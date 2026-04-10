@@ -2199,8 +2199,9 @@
   }
 
   async function startGame() {
+    const useSampleAudio = audio.enabled && shouldUseSampleAudio()
     const audioReadyPromise =
-      audio.enabled && !shouldUseSampleAudio() ? ensureAudio() : Promise.resolve(true)
+      audio.enabled && !useSampleAudio ? ensureAudio() : Promise.resolve(true)
 
     resetPointer(state.pointer.targetX, state.pointer.targetY)
     state.mode = "playing"
@@ -2236,8 +2237,11 @@
     setLoadout(state.selectedLoadout)
     setPhaseLabel("Arena 01")
     showAnnouncement("Defense Grid", "Chamber Online", 1.1)
+    if (useSampleAudio) {
+      playStartSound()
+    }
     const audioReady = await audioReadyPromise
-    if (audio.enabled && audioReady) {
+    if (audio.enabled && audioReady && !useSampleAudio) {
       playStartSound()
     }
     markHudDirty()
