@@ -28,7 +28,7 @@
   const loadoutOptions = Array.from(document.querySelectorAll("[data-loadout]"))
 
   const STORAGE_KEY = "daxhq-best-score"
-  const FIRST_BOSS_SCORE = 540
+  const FIRST_BOSS_SCORE = 720
   const BOSS_VARIANTS = [
     {
       name: "Rift Warden",
@@ -224,9 +224,9 @@
     lastTime: 0,
     titleElapsed: 0,
     elapsed: 0,
-    spawnTimer: 0.9,
-    slashTimer: 2.6,
-    mineTimer: 4.8,
+    spawnTimer: 1.2,
+    slashTimer: 3.8,
+    mineTimer: 6.4,
     bossIntroTimer: 0,
     cooldownTimer: 0,
     score: 0,
@@ -240,6 +240,7 @@
     pulse: 0,
     damageFlash: 0,
     shake: 0,
+    coreHitCooldown: 0,
     announcementTimer: 0,
     parryHintShown: false,
     selectedLoadout: "blue",
@@ -306,10 +307,11 @@
   }
 
   function getArenaRamp() {
-    const timeRamp = clamp((state.elapsed - 18) / 116, 0, 1)
-    const bossRamp = clamp(state.bossesDefeated / 5, 0, 1)
+    const timeRamp = clamp((state.elapsed - 28) / 150, 0, 1)
+    const bossRamp = clamp(state.bossesDefeated / 6, 0, 1)
+    const rawRamp = clamp(timeRamp * 0.58 + bossRamp * 0.32, 0, 1)
 
-    return clamp(timeRamp * 0.6 + bossRamp * 0.34, 0, 1)
+    return Math.pow(rawRamp, 1.35)
   }
 
   function usingCoarseInput() {
@@ -1476,15 +1478,15 @@
     const origin = randomPerimeterPoint(0.72)
     const aimAngle = rand(0, TWO_PI)
     const aimRadius = rand(0, state.center.radius * 0.68)
-    const heavy = Math.random() < 0.16
     const ramp = getArenaRamp()
+    const heavy = Math.random() < 0.08 + ramp * 0.1
 
     createBolt({
       x: origin.x,
       y: origin.y,
       targetX: state.center.x + Math.cos(aimAngle) * aimRadius,
       targetY: state.center.y + Math.sin(aimAngle) * aimRadius,
-      speed: rand(214, 282) + ramp * 116 + state.combo * 0.95 + (heavy ? 28 : 0),
+      speed: rand(184, 248) + ramp * 104 + state.combo * 0.72 + (heavy ? 24 : 0),
       heavy,
       owner: "raider"
     })
@@ -1500,10 +1502,10 @@
 
   function spawnWave() {
     const ramp = getArenaRamp()
-    const burstChance = mix(0.03, 0.26, ramp)
+    const burstChance = mix(0.01, 0.22, ramp)
     let boltsThisWave = 1 + (Math.random() < burstChance ? 1 : 0)
 
-    if (ramp > 0.62 && Math.random() < burstChance * 0.42) {
+    if (ramp > 0.76 && Math.random() < burstChance * 0.36) {
       boltsThisWave += 1
     }
 
@@ -1521,10 +1523,10 @@
     const dy = state.center.y - origin.y
     const distance = Math.hypot(dx, dy) || 1
     const speed =
-      rand(44, 70) + clamp(state.elapsed * 0.28, 0, 14) + (options.speedBonus || 0)
+      rand(38, 60) + clamp(state.elapsed * 0.22, 0, 10) + (options.speedBonus || 0)
     const color = options.color || "255, 166, 82"
     const radius = options.radius || rand(16, 21)
-    const damage = options.damage || 14
+    const damage = options.damage || 12
     const life = options.life || rand(9, 12)
 
     state.mines.push({
@@ -1620,10 +1622,10 @@
       targetY: state.center.y + Math.sin(targetAngle) * targetRadius,
       owner: "raider",
       width: rand(14, 18),
-      damage: 10,
+      damage: 8,
       scoreValue: 30,
-      telegraphDuration: rand(0.82, 1.08),
-      activeDuration: rand(0.24, 0.31),
+      telegraphDuration: rand(0.96, 1.24),
+      activeDuration: rand(0.25, 0.32),
       fadeDuration: 0.28,
       sweep: rand(0.84, 1.14) * (Math.random() < 0.5 ? -1 : 1),
       lengthExtra: rand(68, 104),
@@ -1658,7 +1660,7 @@
     const variant = getBossVariant(level)
     const cycle = getBossCycle(level)
     const rank = clamp((level - 1) / 8, 0, 1)
-    const maxHealth = 96 + level * 46 + cycle * 14
+    const maxHealth = 84 + level * 38 + cycle * 12
 
     state.boss = {
       level,
@@ -1671,16 +1673,16 @@
       health: maxHealth,
       maxHealth,
       guardHits: 0,
-      guardNeeded: Math.max(2, variant.guardNeeded - 1 + cycle),
+      guardNeeded: Math.max(2, variant.guardNeeded - (level <= 2 ? 2 : 1) + cycle),
       vulnerableTimer: 0,
       guardCooldown: 0,
       damageCooldown: 0,
       pressureTimer: 0,
       pressureCooldown: 0,
       phase: "enter",
-      volleyTimer: mix(1.72, 1.18, rank),
-      slashTimer: mix(3.05, 2.18, rank),
-      specialTimer: mix(6.8, 4.4, rank),
+      volleyTimer: mix(2.08, 1.36, rank),
+      slashTimer: mix(3.45, 2.42, rank),
+      specialTimer: mix(7.3, 4.9, rank),
       rage: 0,
       moveSeed: rand(0, TWO_PI),
       hitFlash: 0,
@@ -1696,7 +1698,7 @@
       return
     }
 
-    state.boss.vulnerableTimer = Math.max(2.2, 3 - (state.boss.level - 1) * 0.06)
+    state.boss.vulnerableTimer = Math.max(2.6, 3.35 - (state.boss.level - 1) * 0.05)
     state.boss.guardHits = 0
     state.boss.guardCooldown = 0.2
     state.boss.pressureTimer = 0
@@ -1764,7 +1766,7 @@
     }
 
     state.boss.health = clamp(state.boss.health - amount, 0, state.boss.maxHealth)
-    state.boss.damageCooldown = Math.min(0.09, 0.05 + (state.boss.level - 1) * 0.008)
+    state.boss.damageCooldown = Math.min(0.08, 0.04 + (state.boss.level - 1) * 0.007)
     state.boss.hitFlash = 1
     state.pulse = 1
     state.shake = Math.min(22, state.shake + 5)
@@ -1799,11 +1801,11 @@
     boss.vulnerableTimer = 0
     state.bossesDefeated += 1
     state.bossLevel += 1
-    state.nextBossScore += 720 + boss.level * 130
-    state.cooldownTimer = 2.5
-    state.spawnTimer = 0.88
-    state.slashTimer = 3.4
-    state.mineTimer = 4.9
+    state.nextBossScore += 860 + boss.level * 160
+    state.cooldownTimer = 3.1
+    state.spawnTimer = 1.16
+    state.slashTimer = 4.3
+    state.mineTimer = 6
 
     cleanupHostileThreats(true)
     addScore(240 + boss.level * 80)
@@ -2084,7 +2086,7 @@
     }
 
     const pressureDistance = Math.hypot(state.pointer.x - boss.x, state.pointer.y - boss.y)
-    const pressureEnabled = boss.level >= 3
+    const pressureEnabled = boss.level >= 4
 
     if (pressureEnabled && boss.vulnerableTimer <= 0 && pressureDistance < boss.radius + 84) {
       boss.pressureTimer += dt
@@ -2092,8 +2094,8 @@
       boss.pressureTimer = Math.max(0, boss.pressureTimer - dt * 2)
     }
 
-    if (pressureEnabled && boss.pressureCooldown <= 0 && boss.pressureTimer > 0.96 - bossRamp * 0.12) {
-      boss.pressureCooldown = 1.35
+    if (pressureEnabled && boss.pressureCooldown <= 0 && boss.pressureTimer > 1.08 - bossRamp * 0.1) {
+      boss.pressureCooldown = 1.55
       boss.pressureTimer = 0
       state.combo = 0
       spawnRing(boss.x, boss.y, {
@@ -2103,7 +2105,7 @@
         growth: 206,
         lineWidth: 3.4
       })
-      damageCore(3 + boss.level * 0.75, state.pointer.x, state.pointer.y)
+      damageCore(2 + boss.level * 0.55, state.pointer.x, state.pointer.y)
       return
     }
 
@@ -2113,17 +2115,17 @@
 
     if (boss.vulnerableTimer <= 0 && boss.volleyTimer <= 0) {
       spawnBossVolley()
-      boss.volleyTimer = Math.max(0.94, 1.96 - boss.level * 0.04 - boss.rage * 0.3) * rand(0.94, 1.16)
+      boss.volleyTimer = Math.max(1.08, 2.24 - boss.level * 0.035 - boss.rage * 0.24) * rand(0.94, 1.16)
     }
 
     if (boss.vulnerableTimer <= 0 && boss.slashTimer <= 0) {
       spawnBossSlashCombo()
-      boss.slashTimer = Math.max(1.42, 3 - boss.level * 0.05 - boss.rage * 0.5) * rand(0.9, 1.14)
+      boss.slashTimer = Math.max(1.68, 3.34 - boss.level * 0.04 - boss.rage * 0.38) * rand(0.92, 1.16)
     }
 
     if (boss.vulnerableTimer <= 0 && boss.specialTimer <= 0) {
       spawnBossSpecial()
-      boss.specialTimer = Math.max(4, 6.3 - boss.level * 0.09 - boss.rage * 0.54) * rand(0.96, 1.12)
+      boss.specialTimer = Math.max(4.6, 6.9 - boss.level * 0.075 - boss.rage * 0.42) * rand(0.96, 1.12)
     }
 
     markHudDirty()
@@ -2246,7 +2248,7 @@
   function tryDeflectBolt(bolt) {
     const coarseInput = usingCoarseInput()
 
-    if (state.pointer.speed < (coarseInput ? 205 : 165) || state.pointer.hitCooldown > 0) {
+    if (state.pointer.speed < (coarseInput ? 190 : 150) || state.pointer.hitCooldown > 0) {
       return null
     }
 
@@ -2262,7 +2264,7 @@
         segment.by
       )
 
-      if (distance < bolt.radius + (coarseInput ? 14 : 21) + state.pointer.power * (coarseInput ? 7 : 10)) {
+      if (distance < bolt.radius + (coarseInput ? 16 : 24) + state.pointer.power * (coarseInput ? 9 : 12)) {
         return segment
       }
     }
@@ -2314,11 +2316,16 @@
   }
 
   function damageCore(amount, x, y) {
+    if (state.coreHitCooldown > 0) {
+      return
+    }
+
     state.integrity = clamp(state.integrity - amount, 0, 100)
     state.combo = 0
     state.damageFlash = 1
     state.pulse = 0.4
     state.shake = Math.min(22, state.shake + 7)
+    state.coreHitCooldown = mix(0.34, 0.12, getArenaRamp())
     spawnSparks(x, y, 18, "ember")
     spawnRing(x, y, {
       color: "255, 109, 58",
@@ -2419,7 +2426,7 @@
 
     if (
       !state.playerBlade ||
-      state.pointer.speed < (coarseInput ? 220 : 178) ||
+      state.pointer.speed < (coarseInput ? 200 : 160) ||
       state.pointer.hitCooldown > 0
     ) {
       return null
@@ -2454,7 +2461,7 @@
       }
     }
 
-    if (bestDistance <= width + (coarseInput ? 15 : 22) + state.pointer.power * (coarseInput ? 10 : 14)) {
+    if (bestDistance <= width + (coarseInput ? 18 : 25) + state.pointer.power * (coarseInput ? 12 : 16)) {
       return bestPoint
     }
 
@@ -2564,9 +2571,9 @@
     resetPointer(state.pointer.targetX, state.pointer.targetY)
     state.mode = "playing"
     state.elapsed = 0
-    state.spawnTimer = 1
-    state.slashTimer = 4.2
-    state.mineTimer = 7.2
+    state.spawnTimer = 1.4
+    state.slashTimer = 5.6
+    state.mineTimer = 9.2
     state.bossIntroTimer = 0
     state.cooldownTimer = 0
     state.score = 0
@@ -2579,6 +2586,7 @@
     state.pulse = 0
     state.damageFlash = 0
     state.shake = 0
+    state.coreHitCooldown = 0
     state.bolts = []
     state.mines = []
     state.slashes = []
@@ -2638,6 +2646,7 @@
     state.pulse = Math.max(0, state.pulse - dt * 1.8)
     state.damageFlash = Math.max(0, state.damageFlash - dt * 2.4)
     state.shake = Math.max(0, state.shake - dt * 42)
+    state.coreHitCooldown = Math.max(0, state.coreHitCooldown - dt)
 
     if (state.mode !== "playing") {
       updateHud()
@@ -2664,8 +2673,8 @@
 
     if (!state.boss && state.bossIntroTimer <= 0 && state.cooldownTimer <= 0) {
       const ramp = getArenaRamp()
-      const allowSlashes = state.bossesDefeated > 0 || state.elapsed > 14
-      const allowMines = state.bossesDefeated > 0 || state.elapsed > 34
+      const allowSlashes = state.bossesDefeated > 0 || state.elapsed > 22
+      const allowMines = state.bossesDefeated > 0 || state.elapsed > 48
 
       state.spawnTimer -= dt
       state.slashTimer -= dt
@@ -2673,16 +2682,16 @@
 
       if (state.spawnTimer <= 0) {
         spawnWave()
-        if (ramp > 0.42 && Math.random() < mix(0.04, 0.2, ramp)) {
+        if (ramp > 0.5 && Math.random() < mix(0.03, 0.16, ramp)) {
           spawnAmbientBolt()
         }
-        state.spawnTimer = mix(1.18, 0.56, ramp) * rand(0.88, 1.16)
+        state.spawnTimer = mix(1.34, 0.64, ramp) * rand(0.88, 1.16)
       }
 
       if (allowSlashes && state.slashTimer <= 0) {
         let slashCount = 1
 
-        if (ramp > 0.66 && Math.random() < mix(0.1, 0.46, ramp)) {
+        if (ramp > 0.72 && Math.random() < mix(0.08, 0.36, ramp)) {
           slashCount += 1
         }
 
@@ -2690,13 +2699,13 @@
           spawnRaiderSlash()
         }
 
-        state.slashTimer = mix(4.1, 1.75, ramp) * rand(0.92, 1.16)
+        state.slashTimer = mix(4.8, 2.04, ramp) * rand(0.92, 1.16)
       }
 
       if (allowMines && state.mineTimer <= 0) {
         let mineCount = 1
 
-        if (ramp > 0.82 && Math.random() < mix(0.06, 0.28, ramp)) {
+        if (ramp > 0.88 && Math.random() < mix(0.04, 0.22, ramp)) {
           mineCount += 1
         }
 
@@ -2704,7 +2713,7 @@
           spawnMine()
         }
 
-        state.mineTimer = mix(6.4, 3.2, ramp) * rand(0.94, 1.18)
+        state.mineTimer = mix(7.4, 3.8, ramp) * rand(0.94, 1.18)
       }
     }
 
