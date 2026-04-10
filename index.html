@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="DAX HQ is a fast, playful mouse saber arena with enemy swipes, boss rounds, and arcade-style action."
+    >
+    <meta name="theme-color" content="#08101d">
+    <title>DAX HQ | Mouse Saber Arena</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    >
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <canvas id="arena" aria-hidden="true"></canvas>
+
+    <main class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <p class="eyebrow">DAX HQ</p>
+          <h1>Mouse Saber Arena</h1>
+        </div>
+
+        <div class="status-cluster" aria-label="game status">
+          <div class="status-block">
+            <span class="label">Score</span>
+            <strong id="scoreValue">0000</strong>
+          </div>
+
+          <div class="status-block">
+            <span class="label">Combo</span>
+            <strong id="comboValue">0x</strong>
+          </div>
+
+          <div class="status-block">
+            <span class="label">Integrity</span>
+            <strong id="integrityValue">100%</strong>
+          </div>
+
+          <div class="status-block">
+            <span class="label">Phase</span>
+            <strong id="phaseValue">Standby</strong>
+          </div>
+
+          <div class="status-block">
+            <span class="label">Best</span>
+            <strong id="bestValue">0000</strong>
+          </div>
+        </div>
+      </header>
+
+      <section class="boss-hud hidden" id="bossHud" aria-live="polite">
+        <div class="boss-copy">
+          <p class="eyebrow" id="bossEyebrow">Boss Round 01</p>
+          <h3 id="bossNameValue">Rift Warden</h3>
+        </div>
+
+        <div class="boss-meter" aria-hidden="true">
+          <div class="boss-meter-track">
+            <div class="boss-meter-fill" id="bossBarFill"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="announcement" id="announcement" aria-live="polite">
+        <p class="eyebrow" id="announcementKicker">Boss Incoming</p>
+        <h2 id="announcementTitle">Rift Warden</h2>
+      </section>
+
+      <section class="intro" id="introPanel">
+        <div class="logo-stage" aria-hidden="true">
+          <div class="logo-mark">
+            <span class="logo-ring logo-ring-a"></span>
+            <span class="logo-ring logo-ring-b"></span>
+            <span class="logo-line logo-line-a"></span>
+            <span class="logo-line logo-line-b"></span>
+
+            <div class="logo-core">
+              <span>DAX</span>
+              <strong>HQ</strong>
+            </div>
+          </div>
+
+          <p class="logo-caption">CHAMBER 11 // DEFENSE GRID // READY</p>
+        </div>
+
+        <p class="eyebrow">Custom Sim For Dax</p>
+        <h2>Deflect blaster fire. Parry saber raiders. Break the boss.</h2>
+        <p class="intro-copy">
+          This is now a full mini arcade arena for `daxhq.com`: mouse saber
+          clashes, incoming blade swipes, giant boss fights, and a custom DAX HQ
+          launch screen.
+        </p>
+
+        <div class="loadout" aria-label="saber loadout">
+          <p class="loadout-label">Choose Your Saber</p>
+          <div class="loadout-options" id="loadoutOptions">
+            <button class="loadout-option is-selected" data-loadout="blue" type="button">
+              <span class="loadout-swatch swatch-blue"></span>
+              <strong>Blue</strong>
+              <small>Enemy red</small>
+            </button>
+
+            <button class="loadout-option" data-loadout="green" type="button">
+              <span class="loadout-swatch swatch-green"></span>
+              <strong>Green</strong>
+              <small>Enemy red</small>
+            </button>
+
+            <button class="loadout-option" data-loadout="red" type="button">
+              <span class="loadout-swatch swatch-red"></span>
+              <strong>Red</strong>
+              <small>Enemy blue</small>
+            </button>
+
+            <button class="loadout-option" data-loadout="amber" type="button">
+              <span class="loadout-swatch swatch-amber"></span>
+              <strong>Amber</strong>
+              <small>Enemy cyan</small>
+            </button>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button class="start-button" id="startButton" type="button">
+            Enter Chamber
+          </button>
+          <button class="sound-button" id="soundToggle" type="button">
+            Sound: On
+          </button>
+        </div>
+
+        <div class="instruction-strip" aria-label="instructions">
+          <span>Fast swings make stronger parries</span>
+          <span>Cut across the enemy saber line before it lands</span>
+          <span>Deflected boss fire hurts the boss</span>
+        </div>
+
+        <div class="intro-stats" aria-label="features">
+          <div class="intro-stat">
+            <strong>Mouse Saber</strong>
+            <span>Glowing trail, sparks, and clash feedback</span>
+          </div>
+
+          <div class="intro-stat">
+            <strong>Raider Swipes</strong>
+            <span>Enemy saber arcs that can be parried in motion</span>
+          </div>
+
+          <div class="intro-stat">
+            <strong>Boss Rounds</strong>
+            <span>Named enemies, health bars, and counterplay</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="gameover hidden" id="gameOverPanel" aria-live="polite">
+        <p class="eyebrow">Round Complete</p>
+        <h2>Core breached.</h2>
+        <p class="gameover-copy">
+          Final score: <strong id="finalScoreValue">0</strong>
+        </p>
+
+        <div class="gameover-stats">
+          <div class="gameover-stat">
+            <span>Bosses wrecked</span>
+            <strong id="bossesDefeatedValue">0</strong>
+          </div>
+
+          <div class="gameover-stat">
+            <span>Best run</span>
+            <strong id="finalBestValue">0000</strong>
+          </div>
+        </div>
+
+        <button class="start-button" id="restartButton" type="button">
+          Run It Back
+        </button>
+      </section>
+
+      <footer class="footer-bar">
+        <div class="meter">
+          <span class="label">Slash Power</span>
+          <div class="meter-track" aria-hidden="true">
+            <div class="meter-fill" id="powerMeter"></div>
+          </div>
+        </div>
+      </footer>
+    </main>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
