@@ -27,6 +27,17 @@ python3 -m http.server 4173
 
 Then open `http://localhost:4173`.
 
+## Refresh The Social Card
+
+From `/Users/neil/Projects/daxhq`:
+
+```bash
+./generate-social-preview.sh
+```
+
+This serves the folder locally, waits for the preview page to finish loading,
+and writes a fresh `social-preview.png`.
+
 ## Upload To Namecheap
 
 Upload the contents of this folder into your `public_html` directory.

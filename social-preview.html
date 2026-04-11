@@ -13,13 +13,13 @@
     <style>
       :root {
         --bg-deep: #020711;
-        --bg-mid: #09101d;
+        --bg-mid: #08111f;
         --ice: #8cecff;
-        --ice-bright: #dfffff;
+        --ice-bright: #e2fcff;
         --ember: #ff6d3a;
         --ember-hot: #ffd36b;
         --text: #edf6ff;
-        --muted: rgba(237, 246, 255, 0.72);
+        --muted: rgba(237, 246, 255, 0.76);
         --line: rgba(140, 236, 255, 0.18);
       }
 
@@ -41,10 +41,10 @@
         font-family: "Space Grotesk", sans-serif;
         color: var(--text);
         background:
-          radial-gradient(circle at 18% 20%, rgba(255, 109, 58, 0.18), transparent 24%),
-          radial-gradient(circle at 72% 18%, rgba(140, 236, 255, 0.14), transparent 22%),
-          radial-gradient(circle at 50% 65%, rgba(77, 152, 204, 0.12), transparent 40%),
-          linear-gradient(180deg, #07101c 0%, #02050b 100%);
+          radial-gradient(circle at 18% 18%, rgba(255, 109, 58, 0.16), transparent 26%),
+          radial-gradient(circle at 86% 16%, rgba(140, 236, 255, 0.12), transparent 26%),
+          radial-gradient(circle at 56% 54%, rgba(112, 196, 255, 0.08), transparent 36%),
+          linear-gradient(180deg, #08111f 0%, #02050b 100%);
       }
 
       body::before,
@@ -57,139 +57,341 @@
 
       body::before {
         background:
-          linear-gradient(rgba(140, 236, 255, 0.05) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(140, 236, 255, 0.05) 1px, transparent 1px);
+          linear-gradient(rgba(140, 236, 255, 0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(140, 236, 255, 0.04) 1px, transparent 1px);
         background-size: 64px 64px;
-        opacity: 0.16;
+        mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.18), black 42%, black);
+        opacity: 0.3;
       }
 
       body::after {
         background:
-          radial-gradient(circle at center, transparent 45%, rgba(0, 0, 0, 0.42) 100%);
+          linear-gradient(180deg, rgba(4, 9, 18, 0) 0%, rgba(4, 9, 18, 0.4) 100%),
+          radial-gradient(circle at center, transparent 48%, rgba(0, 0, 0, 0.52) 100%);
       }
 
-      .card {
+      .frame {
         position: relative;
         z-index: 1;
+        display: grid;
+        grid-template-columns: 456px 1fr;
+        gap: 20px;
         width: 100%;
         height: 100%;
-        padding: 42px 46px;
+        padding: 36px 44px 34px;
       }
 
-      .topbar {
+      .copy {
         display: flex;
-        align-items: flex-start;
+        flex-direction: column;
         justify-content: space-between;
+        min-width: 0;
       }
 
-      .brand {
-        max-width: 700px;
+      .brand-row {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+      }
+
+      .brand-mark {
+        position: relative;
+        width: 84px;
+        aspect-ratio: 1;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        border: 1px solid rgba(140, 236, 255, 0.28);
+        background:
+          radial-gradient(circle at center, rgba(140, 236, 255, 0.18), rgba(7, 14, 26, 0.78));
+        box-shadow:
+          0 0 36px rgba(140, 236, 255, 0.12),
+          inset 0 0 24px rgba(255, 109, 58, 0.08);
+      }
+
+      .brand-mark::before,
+      .brand-mark::after {
+        content: "";
+        position: absolute;
+        border-radius: 50%;
+      }
+
+      .brand-mark::before {
+        inset: 10px;
+        border: 1px solid rgba(255, 109, 58, 0.18);
+      }
+
+      .brand-mark::after {
+        inset: -12px;
+        border: 1px solid rgba(140, 236, 255, 0.18);
+      }
+
+      .brand-mark span,
+      .brand-mark strong {
+        display: block;
+        text-align: center;
+        font-family: "Orbitron", sans-serif;
+        text-transform: uppercase;
+      }
+
+      .brand-mark span {
+        color: var(--muted);
+        font-size: 14px;
+        letter-spacing: 0.28em;
+      }
+
+      .brand-mark strong {
+        margin-top: 2px;
+        font-size: 34px;
+        letter-spacing: 0.08em;
       }
 
       .eyebrow,
-      .label {
+      .panel-label,
+      .pill {
         margin: 0;
-        color: var(--muted);
         font-size: 14px;
-        letter-spacing: 0.38em;
+        letter-spacing: 0.3em;
         text-transform: uppercase;
+      }
+
+      .eyebrow,
+      .panel-label {
+        color: var(--muted);
+      }
+
+      .eyebrow + .eyebrow {
+        margin-top: 8px;
       }
 
       h1,
       .boss-title,
-      .score-value,
-      .cta {
+      .cta-url {
         margin: 0;
         font-family: "Orbitron", sans-serif;
         text-transform: uppercase;
       }
 
       h1 {
-        margin-top: 10px;
-        font-size: 72px;
-        line-height: 0.92;
-        letter-spacing: 0.05em;
+        margin-top: 22px;
+        font-size: 82px;
+        line-height: 0.86;
+        letter-spacing: 0.06em;
       }
 
-      .subtitle {
-        margin: 18px 0 0;
-        max-width: 520px;
-        font-size: 26px;
-        line-height: 1.2;
+      h1 span {
+        display: block;
+      }
+
+      .lede {
+        margin: 16px 0 0;
+        max-width: 400px;
+        font-size: 24px;
+        line-height: 1.16;
         color: var(--muted);
       }
 
-      .status {
+      .feature-row {
         display: flex;
+        flex-wrap: wrap;
         gap: 12px;
+        margin-top: 20px;
       }
 
-      .status-block {
-        min-width: 110px;
-        padding: 14px 16px;
+      .pill {
+        padding: 10px 14px;
         border: 1px solid var(--line);
-        background: linear-gradient(180deg, rgba(8, 16, 29, 0.76), rgba(8, 16, 29, 0.4));
-        backdrop-filter: blur(16px);
+        background: linear-gradient(180deg, rgba(8, 16, 29, 0.76), rgba(8, 16, 29, 0.42));
       }
 
-      .score-value {
-        margin-top: 8px;
-        font-size: 24px;
-        letter-spacing: 0.04em;
-      }
-
-      .arena {
-        position: absolute;
-        inset: 0;
-      }
-
-      .core-glow {
-        position: absolute;
-        left: 54%;
-        top: 56%;
-        width: 320px;
-        height: 320px;
-        border-radius: 50%;
-        transform: translate(-50%, -50%);
+      .cta-panel {
+        position: relative;
+        padding: 18px 20px 20px;
+        border: 1px solid rgba(140, 236, 255, 0.18);
         background:
-          radial-gradient(circle, rgba(140, 236, 255, 0.36), rgba(140, 236, 255, 0.06) 45%, transparent 72%);
+          linear-gradient(135deg, rgba(255, 109, 58, 0.1), transparent 38%),
+          linear-gradient(180deg, rgba(7, 14, 26, 0.82), rgba(4, 8, 16, 0.54));
+        box-shadow: 0 26px 70px rgba(0, 0, 0, 0.28);
       }
 
+      .cta-panel::after {
+        content: "";
+        position: absolute;
+        inset: auto 20px 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--ice), var(--ember-hot));
+        box-shadow: 0 0 30px rgba(140, 236, 255, 0.26);
+      }
+
+      .cta-url {
+        margin-top: 10px;
+        font-size: 38px;
+        line-height: 0.94;
+        letter-spacing: 0.08em;
+      }
+
+      .art {
+        position: relative;
+        overflow: hidden;
+      }
+
+      .art::before {
+        content: "";
+        position: absolute;
+        inset: 38px 10px 20px 110px;
+        border-radius: 34px;
+        border: 1px solid rgba(140, 236, 255, 0.08);
+        background:
+          linear-gradient(180deg, rgba(8, 16, 29, 0.16), rgba(8, 16, 29, 0.02)),
+          radial-gradient(circle at center, rgba(140, 236, 255, 0.05), transparent 65%);
+      }
+
+      .boss-card {
+        position: absolute;
+        top: 10px;
+        right: 0;
+        z-index: 3;
+        width: 290px;
+        padding: 18px 18px 20px;
+        border: 1px solid rgba(255, 109, 58, 0.24);
+        background:
+          linear-gradient(135deg, rgba(255, 109, 58, 0.12), transparent 34%),
+          linear-gradient(180deg, rgba(7, 14, 26, 0.86), rgba(4, 8, 16, 0.56));
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.3);
+      }
+
+      .boss-title {
+        margin-top: 10px;
+        font-size: 34px;
+        line-height: 0.95;
+        letter-spacing: 0.06em;
+      }
+
+      .boss-copy {
+        margin-top: 8px;
+        font-size: 16px;
+        line-height: 1.25;
+        color: var(--muted);
+      }
+
+      .boss-bar {
+        margin-top: 16px;
+        height: 14px;
+        border: 1px solid rgba(255, 109, 58, 0.24);
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .boss-bar > span {
+        display: block;
+        width: 72%;
+        height: 100%;
+        background: linear-gradient(90deg, #ff4a2a, var(--ember-hot));
+        box-shadow: 0 0 30px rgba(255, 109, 58, 0.44);
+      }
+
+      .core-glow,
       .core-ring,
       .core-ring::before,
-      .core-ring::after {
+      .core-ring::after,
+      .orbit,
+      .orbit::before {
         position: absolute;
         border-radius: 50%;
         content: "";
       }
 
+      .core-glow {
+        left: 54%;
+        top: 54%;
+        width: 360px;
+        height: 360px;
+        transform: translate(-50%, -50%);
+        background:
+          radial-gradient(circle, rgba(140, 236, 255, 0.34), rgba(140, 236, 255, 0.06) 42%, transparent 72%);
+        filter: blur(2px);
+      }
+
       .core-ring {
         left: 54%;
-        top: 56%;
-        width: 132px;
-        height: 132px;
+        top: 54%;
+        width: 164px;
+        height: 164px;
         transform: translate(-50%, -50%);
-        border: 8px solid rgba(140, 236, 255, 0.78);
+        border: 10px solid rgba(140, 236, 255, 0.78);
         box-shadow: 0 0 44px rgba(140, 236, 255, 0.18);
       }
 
       .core-ring::before {
-        inset: 20px;
-        border: 4px solid rgba(223, 255, 255, 0.92);
+        inset: 24px;
+        border: 5px solid rgba(226, 252, 255, 0.92);
       }
 
       .core-ring::after {
+        inset: -32px;
+        border: 4px solid rgba(255, 211, 107, 0.44);
+        clip-path: inset(0 0 34% 0);
+      }
+
+      .orbit {
+        left: 54%;
+        top: 54%;
+        width: 254px;
+        height: 254px;
+        transform: translate(-50%, -50%) rotate(18deg);
+        border: 1px solid rgba(140, 236, 255, 0.14);
+        clip-path: inset(0 0 46% 0);
+      }
+
+      .orbit::before {
         inset: -26px;
-        border: 4px solid rgba(255, 211, 107, 0.48);
-        clip-path: inset(0 0 36% 0);
+        border: 1px solid rgba(255, 109, 58, 0.16);
+        clip-path: inset(52% 0 0 0);
+      }
+
+      .slash {
+        position: absolute;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.34), transparent);
+        opacity: 0.7;
+        transform-origin: left center;
+      }
+
+      .slash-a {
+        left: 36%;
+        top: 44%;
+        width: 260px;
+        transform: rotate(-40deg);
+      }
+
+      .slash-b {
+        left: 44%;
+        top: 61%;
+        width: 230px;
+        transform: rotate(-40deg);
+        opacity: 0.34;
+      }
+
+      .slash-c {
+        left: 48%;
+        top: 34%;
+        width: 276px;
+        transform: rotate(128deg);
+      }
+
+      .slash-d {
+        left: 54%;
+        top: 52%;
+        width: 214px;
+        transform: rotate(128deg);
+        opacity: 0.34;
       }
 
       .saber {
         position: absolute;
-        height: 14px;
+        height: 18px;
         border-radius: 999px;
         transform-origin: left center;
-        box-shadow: 0 0 30px currentColor;
+        box-shadow: 0 0 34px currentColor;
       }
 
       .saber::before,
@@ -199,14 +401,14 @@
       }
 
       .saber::before {
-        left: -16px;
+        left: -18px;
         top: 50%;
-        width: 24px;
-        height: 10px;
+        width: 28px;
+        height: 12px;
         transform: translateY(-50%);
         border-radius: 999px;
-        background: #1a2232;
-        box-shadow: 0 0 0 2px rgba(255, 211, 107, 0.5);
+        background: #172132;
+        box-shadow: 0 0 0 2px rgba(255, 211, 107, 0.48);
       }
 
       .saber::after {
@@ -216,126 +418,21 @@
       }
 
       .saber-blue {
-        left: 44%;
-        top: 69%;
-        width: 250px;
+        left: 40%;
+        top: 68%;
+        width: 324px;
         color: var(--ice);
-        background: rgba(140, 236, 255, 0.9);
-        transform: rotate(-56deg);
+        background: rgba(140, 236, 255, 0.92);
+        transform: rotate(-55deg);
       }
 
-      .saber-red {
-        left: 63%;
-        top: 33%;
-        width: 274px;
+      .saber-ember {
+        left: 52%;
+        top: 30%;
+        width: 390px;
         color: #ff7862;
         background: rgba(255, 109, 58, 0.92);
-        transform: rotate(138deg);
-      }
-
-      .boss-panel {
-        position: absolute;
-        right: 44px;
-        top: 118px;
-        width: 314px;
-        padding: 16px 18px 18px;
-        border: 1px solid rgba(255, 109, 58, 0.22);
-        background:
-          linear-gradient(135deg, rgba(255, 109, 58, 0.12), transparent 34%),
-          linear-gradient(180deg, rgba(7, 14, 26, 0.82), rgba(4, 8, 16, 0.55));
-      }
-
-      .boss-title {
-        margin-top: 6px;
-        font-size: 34px;
-        line-height: 0.96;
-      }
-
-      .boss-bar {
-        margin-top: 14px;
-        height: 12px;
-        border: 1px solid rgba(255, 109, 58, 0.24);
-        background: rgba(255, 255, 255, 0.08);
-      }
-
-      .boss-bar > span {
-        display: block;
-        width: 74%;
-        height: 100%;
-        background: linear-gradient(90deg, #ff4a2a, #ffd36b);
-        box-shadow: 0 0 34px rgba(255, 109, 58, 0.4);
-      }
-
-      .logo {
-        position: absolute;
-        left: 52px;
-        bottom: 46px;
-        display: flex;
-        align-items: center;
-        gap: 18px;
-      }
-
-      .logo-mark {
-        position: relative;
-        width: 92px;
-        aspect-ratio: 1;
-        border-radius: 50%;
-        display: grid;
-        place-items: center;
-        border: 1px solid rgba(140, 236, 255, 0.28);
-        background:
-          radial-gradient(circle at center, rgba(140, 236, 255, 0.18), rgba(7, 14, 26, 0.78));
-        box-shadow:
-          0 0 36px rgba(140, 236, 255, 0.16),
-          inset 0 0 24px rgba(255, 109, 58, 0.1);
-      }
-
-      .logo-mark::before,
-      .logo-mark::after {
-        content: "";
-        position: absolute;
-        inset: 10px;
-        border-radius: 50%;
-      }
-
-      .logo-mark::before {
-        border: 1px solid rgba(255, 109, 58, 0.22);
-      }
-
-      .logo-mark::after {
-        inset: -12px;
-        border: 1px solid rgba(140, 236, 255, 0.2);
-      }
-
-      .logo-mark span,
-      .logo-mark strong {
-        display: block;
-        text-align: center;
-        font-family: "Orbitron", sans-serif;
-        text-transform: uppercase;
-      }
-
-      .logo-mark span {
-        font-size: 14px;
-        letter-spacing: 0.28em;
-        color: var(--muted);
-      }
-
-      .logo-mark strong {
-        margin-top: 2px;
-        font-size: 34px;
-        letter-spacing: 0.08em;
-      }
-
-      .cta {
-        font-size: 24px;
-        letter-spacing: 0.16em;
-      }
-
-      .footer {
-        margin-top: 8px;
-        color: var(--muted);
-        font-size: 20px;
+        transform: rotate(136deg);
       }
 
       .spark {
@@ -343,68 +440,91 @@
         width: 10px;
         height: 10px;
         border-radius: 50%;
-        box-shadow: 0 0 20px currentColor;
+        box-shadow: 0 0 22px currentColor;
       }
 
-      .spark.a { left: 64%; top: 34%; color: #ffd36b; }
-      .spark.b { left: 66%; top: 37%; color: #ff9b73; }
-      .spark.c { left: 49%; top: 67%; color: #dfffff; }
-      .spark.d { left: 53%; top: 64%; color: #8cecff; }
+      .spark-a { left: 66%; top: 34%; color: var(--ember-hot); }
+      .spark-b { left: 69%; top: 38%; color: #ff9b73; }
+      .spark-c { left: 52%; top: 67%; color: var(--ice-bright); }
+      .spark-d { left: 56%; top: 62%; color: var(--ice); }
+      .spark-e { left: 62%; top: 50%; color: rgba(255, 255, 255, 0.88); }
+
     </style>
   </head>
   <body>
-    <div class="card">
-      <div class="topbar">
-        <div class="brand">
-          <p class="eyebrow">DAX HQ</p>
-          <h1>Mouse Saber Arena</h1>
-          <p class="subtitle">Deflect blaster fire. Parry saber raiders. Break the boss.</p>
+    <div class="frame">
+      <section class="copy">
+        <div>
+          <div class="brand-row">
+            <div class="brand-mark" aria-hidden="true">
+              <div>
+                <span>DAX</span>
+                <strong>HQ</strong>
+              </div>
+            </div>
+
+            <div>
+              <p class="eyebrow">DAX HQ</p>
+              <p class="eyebrow">Live Neon Defense Grid</p>
+            </div>
+          </div>
+
+          <h1>
+            <span>Mouse</span>
+            <span>Saber</span>
+            <span>Arena</span>
+          </h1>
+
+          <p class="lede">Fast mouse duels with parries, boss rounds, and arcade chaos.</p>
+
+          <div class="feature-row" aria-hidden="true">
+            <span class="pill">Deflect bolts</span>
+            <span class="pill">Parry raiders</span>
+            <span class="pill">Break bosses</span>
+          </div>
         </div>
 
-        <div class="status" aria-hidden="true">
-          <div class="status-block">
-            <p class="label">Score</p>
-            <p class="score-value">8327</p>
-          </div>
-          <div class="status-block">
-            <p class="label">Combo</p>
-            <p class="score-value">15x</p>
-          </div>
-          <div class="status-block">
-            <p class="label">Phase</p>
-            <p class="score-value">Boss 02</p>
-          </div>
+        <div class="cta-panel">
+          <p class="panel-label">Play Now</p>
+          <p class="cta-url">daxhq.com</p>
         </div>
-      </div>
+      </section>
 
-      <div class="arena" aria-hidden="true">
-        <div class="core-glow"></div>
-        <div class="core-ring"></div>
-        <div class="saber saber-blue"></div>
-        <div class="saber saber-red"></div>
-        <div class="boss-panel">
-          <p class="eyebrow">Boss Round 02 // Guard 3/5</p>
+      <section class="art" aria-hidden="true">
+        <div class="boss-card">
+          <p class="panel-label">Boss Alert // Round 02</p>
           <p class="boss-title">Chrome<br>Reaper</p>
+          <p class="boss-copy">Saber raid patterns, heavy blaster fire, and a breakable core shield.</p>
           <div class="boss-bar"><span></span></div>
         </div>
-        <span class="spark a"></span>
-        <span class="spark b"></span>
-        <span class="spark c"></span>
-        <span class="spark d"></span>
-      </div>
 
-      <div class="logo">
-        <div class="logo-mark">
-          <div>
-            <span>DAX</span>
-            <strong>HQ</strong>
-          </div>
-        </div>
-        <div>
-          <p class="cta">Fast Mouse Duels For Dax And Friends</p>
-          <p class="footer">daxhq.com</p>
-        </div>
-      </div>
+        <div class="core-glow"></div>
+        <div class="core-ring"></div>
+        <div class="orbit"></div>
+
+        <div class="slash slash-a"></div>
+        <div class="slash slash-b"></div>
+        <div class="slash slash-c"></div>
+        <div class="slash slash-d"></div>
+
+        <div class="saber saber-blue"></div>
+        <div class="saber saber-ember"></div>
+
+        <span class="spark spark-a"></span>
+        <span class="spark spark-b"></span>
+        <span class="spark spark-c"></span>
+        <span class="spark spark-d"></span>
+        <span class="spark spark-e"></span>
+      </section>
     </div>
+
+    <script>
+      Promise.all([
+        document.fonts ? document.fonts.ready.catch(() => {}) : Promise.resolve(),
+        new Promise((resolve) => window.addEventListener("load", resolve, { once: true })),
+      ]).then(() => {
+        document.body.dataset.ready = "true";
+      });
+    </script>
   </body>
 </html>
