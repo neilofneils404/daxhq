@@ -162,9 +162,9 @@
     purple: {
       id: "purple",
       player: {
-        blade: "186, 124, 255",
-        core: "245, 233, 255",
-        trail: "154, 116, 255",
+        blade: "204, 82, 255",
+        core: "242, 212, 255",
+        trail: "161, 64, 255",
         hilt: "255, 211, 107",
         grip: "20, 24, 38"
       },
@@ -332,6 +332,9 @@
     state.playerPalette = loadout.player
     state.enemyPalette = loadout.enemy
     writeSavedLoadout(loadout.id)
+    document.documentElement.style.setProperty("--saber-blade", loadout.player.blade)
+    document.documentElement.style.setProperty("--saber-core", loadout.player.core)
+    document.documentElement.style.setProperty("--saber-trail", loadout.player.trail)
 
     for (const option of loadoutOptions) {
       const isSelected = option.dataset.loadout === loadout.id

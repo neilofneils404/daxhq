@@ -9,6 +9,9 @@
   --ember-deep: #ff3f2b;
   --text: #edf6ff;
   --muted: rgba(237, 246, 255, 0.72);
+  --saber-blade: 140, 236, 255;
+  --saber-core: 223, 255, 255;
+  --saber-trail: 118, 212, 255;
   --line: rgba(140, 236, 255, 0.18);
   --line-strong: rgba(140, 236, 255, 0.34);
   --panel: rgba(5, 12, 24, 0.54);
@@ -453,9 +456,22 @@ body.is-playing {
 .loadout-option:hover,
 .loadout-option.is-selected {
   transform: translateY(-2px);
+}
+
+.loadout-option:hover {
   border-color: rgba(140, 236, 255, 0.4);
   background: rgba(11, 24, 40, 0.72);
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.24);
+}
+
+.loadout-option.is-selected {
+  border-color: rgba(var(--saber-blade), 0.58);
+  background:
+    linear-gradient(180deg, rgba(var(--saber-blade), 0.14), rgba(11, 24, 40, 0.72));
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.24),
+    0 0 0 1px rgba(var(--saber-core), 0.16),
+    0 0 28px rgba(var(--saber-trail), 0.24);
 }
 
 .loadout-option:focus-visible,
@@ -513,8 +529,8 @@ body.is-playing {
 }
 
 .swatch-purple {
-  color: #ba7cff;
-  background: linear-gradient(90deg, #9a63ff, #f5e9ff);
+  color: #cc52ff;
+  background: linear-gradient(90deg, #8f38ff, #f2d4ff);
 }
 
 .instruction-strip {
@@ -650,8 +666,9 @@ body.is-playing {
 .meter-fill {
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, var(--ice), var(--ice-bright));
-  box-shadow: 0 0 24px rgba(140, 236, 255, 0.7);
+  background:
+    linear-gradient(90deg, rgba(var(--saber-trail), 1), rgba(var(--saber-core), 1));
+  box-shadow: 0 0 24px rgba(var(--saber-blade), 0.72);
   transform-origin: left center;
   transition: transform 90ms linear;
 }
