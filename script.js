@@ -28,6 +28,7 @@
   const loadoutOptions = Array.from(document.querySelectorAll("[data-loadout]"))
 
   const STORAGE_KEY = "daxhq-best-score"
+  const LOADOUT_STORAGE_KEY = "daxhq-loadout"
   const FIRST_BOSS_SCORE = 720
   const BOSS_VARIANTS = [
     {
@@ -157,6 +158,20 @@
         blade: "140, 236, 255",
         core: "223, 255, 255"
       }
+    },
+    purple: {
+      id: "purple",
+      player: {
+        blade: "186, 124, 255",
+        core: "245, 233, 255",
+        trail: "154, 116, 255",
+        hilt: "255, 211, 107",
+        grip: "20, 24, 38"
+      },
+      enemy: {
+        blade: "255, 186, 72",
+        core: "255, 240, 191"
+      }
     }
   }
 
@@ -179,6 +194,24 @@
       localStorage.setItem(STORAGE_KEY, String(value))
     } catch {}
   }
+
+  function readSavedLoadout() {
+    try {
+      const storedValue = localStorage.getItem(LOADOUT_STORAGE_KEY)
+      return storedValue && SABER_LOADOUTS[storedValue] ? storedValue : "blue"
+    } catch {
+      return "blue"
+    }
+  }
+
+  function writeSavedLoadout(value) {
+    try {
+      localStorage.setItem(LOADOUT_STORAGE_KEY, value)
+    } catch {}
+  }
+
+  const initialLoadoutId = readSavedLoadout()
+  const initialLoadout = SABER_LOADOUTS[initialLoadoutId] || SABER_LOADOUTS.blue
 
   const audio = {
     enabled: true,
@@ -243,7 +276,7 @@
     coreHitCooldown: 0,
     announcementTimer: 0,
     parryHintShown: false,
-    selectedLoadout: "blue",
+    selectedLoadout: initialLoadout.id,
     hudDirty: true,
     center: {
       x: window.innerWidth * 0.5,
@@ -264,8 +297,8 @@
       hitCooldown: 0
     },
     playerBlade: null,
-    playerPalette: SABER_LOADOUTS.blue.player,
-    enemyPalette: SABER_LOADOUTS.blue.enemy,
+    playerPalette: initialLoadout.player,
+    enemyPalette: initialLoadout.enemy,
     trail: [],
     bolts: [],
     mines: [],
@@ -298,9 +331,12 @@
     state.selectedLoadout = loadout.id
     state.playerPalette = loadout.player
     state.enemyPalette = loadout.enemy
+    writeSavedLoadout(loadout.id)
 
     for (const option of loadoutOptions) {
-      option.classList.toggle("is-selected", option.dataset.loadout === loadout.id)
+      const isSelected = option.dataset.loadout === loadout.id
+      option.classList.toggle("is-selected", isSelected)
+      option.setAttribute("aria-pressed", String(isSelected))
     }
 
     markHudDirty()

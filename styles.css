@@ -431,7 +431,7 @@ body.is-playing {
 
 .loadout-options {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(8.4rem, 1fr));
   gap: 0.7rem;
 }
 
@@ -456,6 +456,13 @@ body.is-playing {
   border-color: rgba(140, 236, 255, 0.4);
   background: rgba(11, 24, 40, 0.72);
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.24);
+}
+
+.loadout-option:focus-visible,
+.start-button:focus-visible,
+.sound-button:focus-visible {
+  outline: 2px solid rgba(223, 255, 255, 0.92);
+  outline-offset: 3px;
 }
 
 .loadout-option strong,
@@ -503,6 +510,11 @@ body.is-playing {
 .swatch-amber {
   color: #ffba48;
   background: linear-gradient(90deg, #ffba48, #fff0bf);
+}
+
+.swatch-purple {
+  color: #ba7cff;
+  background: linear-gradient(90deg, #9a63ff, #f5e9ff);
 }
 
 .instruction-strip {
