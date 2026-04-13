@@ -24,7 +24,9 @@
   const restartButton = document.getElementById("restartButton")
   const replayTutorialButton = document.getElementById("replayTutorialButton")
   const soundToggle = document.getElementById("soundToggle")
+  const assistToggle = document.getElementById("assistToggle")
   const testSoundButton = document.getElementById("testSoundButton")
+  const assistCopy = document.getElementById("assistCopy")
   const audioDiagnostic = document.getElementById("audioDiagnostic")
   const tutorialCard = document.getElementById("tutorialCard")
   const tutorialStepLabel = document.getElementById("tutorialStepLabel")
@@ -48,6 +50,7 @@
   const LOADOUT_STORAGE_KEY = "daxhq-loadout"
   const TUTORIAL_STORAGE_KEY = "daxhq-tutorial-state"
   const PROGRESS_STORAGE_KEY = "daxhq-progress"
+  const ASSIST_STORAGE_KEY = "daxhq-assist-mode"
   const FIRST_BOSS_SCORE = 720
   const BOSS_VARIANTS = [
     {
@@ -258,6 +261,23 @@
     } catch {}
   }
 
+  function readSavedAssistMode() {
+    try {
+      const storedValue = localStorage.getItem(ASSIST_STORAGE_KEY)
+      if (storedValue === "on" || storedValue === "off") {
+        return storedValue
+      }
+    } catch {}
+
+    return null
+  }
+
+  function writeSavedAssistMode(value) {
+    try {
+      localStorage.setItem(ASSIST_STORAGE_KEY, value ? "on" : "off")
+    } catch {}
+  }
+
   const RANKS = [
     { title: "Initiate", threshold: 0 },
     { title: "Deflector", threshold: 4 },
@@ -431,8 +451,13 @@
 
   let progress = readProgress()
 
+  const prefersCoarsePointer = () =>
+    window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0
+
   const initialLoadoutId = readSavedLoadout()
   const initialLoadout = SABER_LOADOUTS[initialLoadoutId] || SABER_LOADOUTS.blue
+  const savedAssistMode = readSavedAssistMode()
+  const initialAssistMode = savedAssistMode === null ? prefersCoarsePointer() : savedAssistMode === "on"
 
   const analytics = {
     track(eventName, detail = {}) {
@@ -533,6 +558,8 @@
     parryHintShown: false,
     runDeflects: 0,
     runParries: 0,
+    assistMode: initialAssistMode,
+    assistModeExplicit: savedAssistMode !== null,
     selectedLoadout: initialLoadout.id,
     hudDirty: true,
     center: {
@@ -674,11 +701,34 @@
   }
 
   function usingCoarseInput() {
-    return (
-      state.pointer.pointerType === "touch" ||
-      window.matchMedia("(pointer: coarse)").matches ||
-      navigator.maxTouchPoints > 0
-    )
+    return state.pointer.pointerType === "touch" || prefersCoarsePointer()
+  }
+
+  function isAssistModeOn() {
+    return !!state.assistMode
+  }
+
+  function getInputTuning() {
+    const coarseInput = usingCoarseInput()
+    const assistMode = isAssistModeOn()
+
+    return {
+      coarseInput,
+      assistMode,
+      bladeLengthScale: coarseInput ? (assistMode ? 0.98 : 0.88) : 1,
+      pointerFollow: coarseInput ? (assistMode ? 15.5 : 14) : 18,
+      speedScale: coarseInput ? (assistMode ? 0.8 : 0.72) : 1,
+      powerThreshold: coarseInput ? (assistMode ? 144 : 165) : 120,
+      powerRange: coarseInput ? (assistMode ? 900 : 980) : 900,
+      deflectSpeed: coarseInput ? (assistMode ? 165 : 190) : 150,
+      deflectRadius: coarseInput ? (assistMode ? 22 : 16) : 24,
+      deflectPowerBonus: coarseInput ? (assistMode ? 12 : 9) : 12,
+      deflectCooldown: coarseInput ? (assistMode ? 0.072 : 0.085) : 0.055,
+      parrySpeed: coarseInput ? (assistMode ? 176 : 200) : 160,
+      parryRadius: coarseInput ? (assistMode ? 24 : 18) : 25,
+      parryPowerBonus: coarseInput ? (assistMode ? 15 : 12) : 16,
+      parryCooldown: coarseInput ? (assistMode ? 0.078 : 0.09) : 0.06
+    }
   }
 
   function shouldUseSampleAudio() {
@@ -1108,6 +1158,41 @@
 
     if (state.announcementTimer <= 0) {
       announcement.classList.remove("is-visible")
+    }
+  }
+
+  function updateAssistLabel() {
+    if (!assistToggle || !assistCopy) {
+      return
+    }
+
+    const coarseInput = usingCoarseInput()
+    assistToggle.textContent = `Assist: ${isAssistModeOn() ? "On" : "Off"}`
+    assistCopy.textContent = coarseInput
+      ? isAssistModeOn()
+        ? "Touch assist is active: a little extra reach and timing forgiveness."
+        : "Touch assist is off. Turn it on for a little extra reach and timing forgiveness."
+      : "Optional touch assist helps on phones without changing desktop feel."
+  }
+
+  function setAssistMode(enabled, { track = true } = {}) {
+    const nextValue = !!enabled
+
+    if (state.assistMode === nextValue && state.assistModeExplicit) {
+      updateAssistLabel()
+      return
+    }
+
+    state.assistMode = nextValue
+    state.assistModeExplicit = true
+    writeSavedAssistMode(nextValue)
+    updateAssistLabel()
+
+    if (track) {
+      analytics.track("assist_mode_toggle", {
+        enabled: nextValue,
+        coarseInput: usingCoarseInput()
+      })
     }
   }
 
@@ -2530,7 +2615,8 @@
     const handleFrontY = state.pointer.y - directionY * 10
     const handleBackX = state.pointer.x + directionX * 22
     const handleBackY = state.pointer.y + directionY * 22
-    const bladeLength = (118 + state.pointer.power * 72) * (usingCoarseInput() ? 0.88 : 1)
+    const tuning = getInputTuning()
+    const bladeLength = (118 + state.pointer.power * 72) * tuning.bladeLengthScale
     const bladeTipX = handleFrontX - directionX * bladeLength
     const bladeTipY = handleFrontY - directionY * bladeLength
     const pommelX = handleBackX + directionX * 8
@@ -2556,8 +2642,8 @@
   }
 
   function updatePointer(dt) {
-    const coarseInput = usingCoarseInput()
-    const follow = 1 - Math.exp(-dt * (coarseInput ? 14 : 18))
+    const tuning = getInputTuning()
+    const follow = 1 - Math.exp(-dt * tuning.pointerFollow)
 
     state.pointer.x = mix(state.pointer.x, state.pointer.targetX, follow)
     state.pointer.y = mix(state.pointer.y, state.pointer.targetY, follow)
@@ -2567,8 +2653,8 @@
     const distance = Math.hypot(dx, dy)
 
     const rawSpeed = distance / Math.max(dt, 0.001)
-    state.pointer.speed = rawSpeed * (coarseInput ? 0.72 : 1)
-    state.pointer.power = clamp((state.pointer.speed - (coarseInput ? 165 : 120)) / (coarseInput ? 980 : 900), 0, 1)
+    state.pointer.speed = rawSpeed * tuning.speedScale
+    state.pointer.power = clamp((state.pointer.speed - tuning.powerThreshold) / tuning.powerRange, 0, 1)
 
     if (distance > 0.25) {
       state.pointer.angle = Math.atan2(dy, dx)
@@ -2619,9 +2705,9 @@
   }
 
   function tryDeflectBolt(bolt) {
-    const coarseInput = usingCoarseInput()
+    const tuning = getInputTuning()
 
-    if (state.pointer.speed < (coarseInput ? 190 : 150) || state.pointer.hitCooldown > 0) {
+    if (state.pointer.speed < tuning.deflectSpeed || state.pointer.hitCooldown > 0) {
       return null
     }
 
@@ -2637,7 +2723,7 @@
         segment.by
       )
 
-      if (distance < bolt.radius + (coarseInput ? 16 : 24) + state.pointer.power * (coarseInput ? 9 : 12)) {
+      if (distance < bolt.radius + tuning.deflectRadius + state.pointer.power * tuning.deflectPowerBonus) {
         return segment
       }
     }
@@ -2678,7 +2764,7 @@
     progress.boltsDeflected += 1
     recordComboPeak()
     saveAndRenderProgress({ source: "deflect" })
-    state.pointer.hitCooldown = usingCoarseInput() ? 0.085 : 0.055
+    state.pointer.hitCooldown = getInputTuning().deflectCooldown
     addScore(10 + Math.min(50, state.combo * 2))
     state.pulse = 1
     state.shake = Math.min(18, state.shake + 4)
@@ -2800,11 +2886,11 @@
   }
 
   function findParryContact(segment, width) {
-    const coarseInput = usingCoarseInput()
+    const tuning = getInputTuning()
 
     if (
       !state.playerBlade ||
-      state.pointer.speed < (coarseInput ? 200 : 160) ||
+      state.pointer.speed < tuning.parrySpeed ||
       state.pointer.hitCooldown > 0
     ) {
       return null
@@ -2839,7 +2925,7 @@
       }
     }
 
-    if (bestDistance <= width + (coarseInput ? 18 : 25) + state.pointer.power * (coarseInput ? 12 : 16)) {
+    if (bestDistance <= width + tuning.parryRadius + state.pointer.power * tuning.parryPowerBonus) {
       return bestPoint
     }
 
@@ -2856,7 +2942,7 @@
     progress.parries += 1
     recordComboPeak()
     saveAndRenderProgress({ source: "parry" })
-    state.pointer.hitCooldown = usingCoarseInput() ? 0.09 : 0.06
+    state.pointer.hitCooldown = getInputTuning().parryCooldown
     addScore(slash.scoreValue + Math.min(60, state.combo * 3))
     state.pulse = 1
     state.shake = Math.min(18, state.shake + 5)
@@ -3808,6 +3894,7 @@
   function handlePointerMove(event) {
     if (event.pointerType) {
       state.pointer.pointerType = event.pointerType
+      updateAssistLabel()
     }
 
     state.pointer.targetX = event.clientX
@@ -3868,10 +3955,12 @@
   }, { passive: true })
   window.addEventListener("touchstart", () => {
     state.pointer.pointerType = "touch"
+    updateAssistLabel()
     handleUserActivation()
   }, { passive: true })
   window.addEventListener("touchmove", () => {
     state.pointer.pointerType = "touch"
+    updateAssistLabel()
     handleUserActivation()
   }, { passive: true })
   window.addEventListener("keydown", () => {
@@ -3909,6 +3998,9 @@
   })
   soundToggle.addEventListener("click", () => {
     void handleSoundToggle()
+  })
+  assistToggle.addEventListener("click", () => {
+    setAssistMode(!isAssistModeOn())
   })
   testSoundButton.addEventListener("click", () => {
     void handleTestSound()
@@ -3948,6 +4040,11 @@
           : null
       }),
       getProgress: () => JSON.parse(JSON.stringify(progress)),
+      getSettings: () => ({
+        assistMode: state.assistMode,
+        assistModeExplicit: state.assistModeExplicit,
+        coarseInput: usingCoarseInput()
+      }),
       forceBossRound() {
         if (state.mode !== "playing") {
           startGame()
@@ -4060,6 +4157,7 @@
   setLoadout(state.selectedLoadout)
   maybeOpenFirstRunTutorial()
   updateReplayTutorialButton()
+  updateAssistLabel()
   updateSoundLabel()
   renderProgress(progress)
   updateHud(true)

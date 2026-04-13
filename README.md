@@ -14,6 +14,7 @@ deflect incoming plasma, parry enemy blade swipes, and wreck boss rounds.
 - custom DAX HQ intro/logo screen
 - quick first-run tutorial with skip and replay
 - mouse and touch saber controls
+- lightweight mobile assist mode, defaulting on for coarse/touch devices until changed
 - enemy blaster bolts and saber swipe attacks
 - boss rounds with names, health bars, and counterplay
 - local best-score, loadout, tutorial state, lifetime stats, and achievements
@@ -62,6 +63,7 @@ Tracked events:
 - `tutorial_completed`
 - `tutorial_skipped`
 - `sound_toggle`
+- `assist_mode_toggle`
 
 ## Run It Locally
 
@@ -107,6 +109,7 @@ This project stays fully static and Cloudflare Pages-safe.
 - no build step required
 - no backend, SSR, auth, or server state
 - persistence uses `localStorage`
+- mobile assist preference is stored locally under `daxhq-assist-mode`
 - progression is intentionally lightweight: lifetime stats, a small achievement set, and a cosmetic rank only
 - analytics hooks gracefully no-op unless a supported client-side surface exists
 

@@ -94,3 +94,28 @@ test('progression stats persist after a run and boss clear', async ({ page }) =>
   expect(progress.bossesDefeated).toBeGreaterThanOrEqual(1)
   expect(progress.unlocked.length).toBeGreaterThan(0)
 })
+
+test('assist mode can be toggled and persists across reloads', async ({ page }) => {
+  await resetApp(page)
+
+  const assistButton = page.getByRole('button', { name: /Assist:/ })
+  await expect(assistButton).toBeVisible()
+
+  const initialSettings = await page.evaluate(() => window.__daxhqDebug.getSettings())
+  const expectedStoredValue = initialSettings.assistMode ? 'off' : 'on'
+
+  await assistButton.click()
+  await expect(page.getByRole('button', { name: new RegExp(`Assist: ${initialSettings.assistMode ? 'Off' : 'On'}`) })).toBeVisible()
+
+  let settings = await page.evaluate(() => window.__daxhqDebug.getSettings())
+  expect(settings.assistMode).toBe(!initialSettings.assistMode)
+  expect(settings.assistModeExplicit).toBe(true)
+
+  await page.reload()
+
+  await expect(page.getByRole('button', { name: new RegExp(`Assist: ${initialSettings.assistMode ? 'Off' : 'On'}`) })).toBeVisible()
+  settings = await page.evaluate(() => window.__daxhqDebug.getSettings())
+  expect(settings.assistMode).toBe(!initialSettings.assistMode)
+  expect(settings.assistModeExplicit).toBe(true)
+  expect(await page.evaluate(() => localStorage.getItem('daxhq-assist-mode'))).toBe(expectedStoredValue)
+})

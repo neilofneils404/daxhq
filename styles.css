@@ -729,11 +729,19 @@ body.is-playing {
   transform: translateY(-2px);
 }
 
+.assist-copy,
 .audio-diagnostic {
   min-height: 1.35rem;
-  margin: 0.75rem 0 0;
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.assist-copy {
+  margin: 0.75rem 0 0;
+}
+
+.audio-diagnostic {
+  margin: 0.35rem 0 0;
 }
 
 .audio-diagnostic[data-state="error"] {
@@ -916,6 +924,10 @@ body.is-playing {
 @media (max-width: 640px) {
   .brand h1 {
     font-size: 1rem;
+  }
+
+  .controls > * {
+    flex: 1 1 100%;
   }
 
   .intro,
