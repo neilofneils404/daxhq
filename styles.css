@@ -648,6 +648,49 @@ body.is-playing {
   color: #c9fff2;
 }
 
+.tutorial-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(140, 236, 255, 0.18);
+  background: rgba(8, 16, 29, 0.52);
+}
+
+.tutorial-card.hidden {
+  display: none;
+}
+
+.tutorial-step {
+  margin: 0 0 0.35rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.tutorial-card h3 {
+  margin: 0;
+  font-family: "Orbitron", sans-serif;
+  font-size: clamp(1rem, 2.6vw, 1.35rem);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.tutorial-card p:last-child {
+  margin: 0.45rem 0 0;
+  color: var(--muted);
+}
+
+.tutorial-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  justify-content: flex-end;
+}
+
 .footer-bar {
   align-items: flex-end;
   justify-content: flex-start;
@@ -749,6 +792,18 @@ body.is-playing {
 
   .announcement {
     width: calc(100vw - 2rem);
+  }
+}
+
+@media (max-width: 840px) {
+  .tutorial-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .tutorial-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 }
 

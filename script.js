@@ -22,13 +22,21 @@
   const gameOverPanel = document.getElementById("gameOverPanel")
   const startButton = document.getElementById("startButton")
   const restartButton = document.getElementById("restartButton")
+  const replayTutorialButton = document.getElementById("replayTutorialButton")
   const soundToggle = document.getElementById("soundToggle")
   const testSoundButton = document.getElementById("testSoundButton")
   const audioDiagnostic = document.getElementById("audioDiagnostic")
+  const tutorialCard = document.getElementById("tutorialCard")
+  const tutorialStepLabel = document.getElementById("tutorialStepLabel")
+  const tutorialTitle = document.getElementById("tutorialTitle")
+  const tutorialCopy = document.getElementById("tutorialCopy")
+  const tutorialSkipButton = document.getElementById("tutorialSkipButton")
+  const tutorialNextButton = document.getElementById("tutorialNextButton")
   const loadoutOptions = Array.from(document.querySelectorAll("[data-loadout]"))
 
   const STORAGE_KEY = "daxhq-best-score"
   const LOADOUT_STORAGE_KEY = "daxhq-loadout"
+  const TUTORIAL_STORAGE_KEY = "daxhq-tutorial-state"
   const FIRST_BOSS_SCORE = 720
   const BOSS_VARIANTS = [
     {
@@ -175,6 +183,21 @@
     }
   }
 
+  const TUTORIAL_STEPS = [
+    {
+      title: "Move your mouse to aim the saber.",
+      copy: "Fast cuts build slash power for stronger deflects."
+    },
+    {
+      title: "Swipe through red shots to deflect them.",
+      copy: "Returned boss fire deals damage back to the boss."
+    },
+    {
+      title: "Cut across enemy saber arcs before they land.",
+      copy: "Parries build score and crack boss guard faster."
+    }
+  ]
+
   const TWO_PI = Math.PI * 2
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
   const mix = (a, b, amount) => a + (b - a) * amount
@@ -195,6 +218,20 @@
     } catch {}
   }
 
+  function readTutorialState() {
+    try {
+      return localStorage.getItem(TUTORIAL_STORAGE_KEY) || "pending"
+    } catch {
+      return "pending"
+    }
+  }
+
+  function writeTutorialState(value) {
+    try {
+      localStorage.setItem(TUTORIAL_STORAGE_KEY, value)
+    } catch {}
+  }
+
   function readSavedLoadout() {
     try {
       const storedValue = localStorage.getItem(LOADOUT_STORAGE_KEY)
@@ -212,6 +249,34 @@
 
   const initialLoadoutId = readSavedLoadout()
   const initialLoadout = SABER_LOADOUTS[initialLoadoutId] || SABER_LOADOUTS.blue
+
+  const analytics = {
+    track(eventName, detail = {}) {
+      const payload = {
+        event: eventName,
+        detail,
+        timestamp: Date.now()
+      }
+
+      window.setTimeout(() => {
+        try {
+          if (typeof window.plausible === "function") {
+            window.plausible(eventName, { props: detail })
+          }
+
+          if (typeof window.gtag === "function") {
+            window.gtag("event", eventName, detail)
+          }
+
+          if (Array.isArray(window.dataLayer)) {
+            window.dataLayer.push(payload)
+          }
+
+          document.dispatchEvent(new CustomEvent("daxhq:analytics", { detail: payload }))
+        } catch {}
+      }, 0)
+    }
+  }
 
   const audio = {
     enabled: true,
@@ -251,6 +316,11 @@
 
   const state = {
     mode: "title",
+    tutorial: {
+      state: readTutorialState(),
+      index: 0,
+      active: false
+    },
     width: window.innerWidth,
     height: window.innerHeight,
     dpr: Math.min(window.devicePixelRatio || 1, 2),
@@ -323,6 +393,69 @@
 
   function getLoadout(id) {
     return SABER_LOADOUTS[id] || SABER_LOADOUTS.blue
+  }
+
+  function updateReplayTutorialButton() {
+    replayTutorialButton.textContent =
+      state.tutorial.state === "pending" ? "Quick Tutorial" : "Replay Tutorial"
+  }
+
+  function updateTutorialCard() {
+    if (!state.tutorial.active) {
+      tutorialCard.classList.add("hidden")
+      return
+    }
+
+    const step = TUTORIAL_STEPS[state.tutorial.index]
+    tutorialStepLabel.textContent = `Quick tutorial ${state.tutorial.index + 1}/${TUTORIAL_STEPS.length}`
+    tutorialTitle.textContent = step.title
+    tutorialCopy.textContent = step.copy
+    tutorialNextButton.textContent =
+      state.tutorial.index === TUTORIAL_STEPS.length - 1 ? "Done" : "Next"
+    tutorialCard.classList.remove("hidden")
+  }
+
+  function openTutorial({ replay = false } = {}) {
+    state.tutorial.active = true
+    state.tutorial.index = 0
+    updateTutorialCard()
+    analytics.track("tutorial_started", { replay })
+  }
+
+  function closeTutorial(nextState, eventName) {
+    state.tutorial.active = false
+    state.tutorial.state = nextState
+    writeTutorialState(nextState)
+    updateTutorialCard()
+    updateReplayTutorialButton()
+    analytics.track(eventName, { stepCount: TUTORIAL_STEPS.length })
+  }
+
+  function advanceTutorial() {
+    if (!state.tutorial.active) {
+      return
+    }
+
+    if (state.tutorial.index >= TUTORIAL_STEPS.length - 1) {
+      closeTutorial("completed", "tutorial_completed")
+      return
+    }
+
+    state.tutorial.index += 1
+    updateTutorialCard()
+  }
+
+  function skipTutorial() {
+    closeTutorial("skipped", "tutorial_skipped")
+  }
+
+  function maybeOpenFirstRunTutorial() {
+    if (state.tutorial.state === "pending") {
+      openTutorial()
+    } else {
+      updateTutorialCard()
+      updateReplayTutorialButton()
+    }
   }
 
   function setLoadout(id) {
@@ -1684,6 +1817,7 @@
     state.bossIntroTimer = 2
     setPhaseLabel(`Boss ${String(level).padStart(2, "0")}`)
     showAnnouncement("Boss Incoming", bossNameForLevel(level), 2.1)
+    analytics.track("boss_reached", { level, boss: bossNameForLevel(level) })
     spawnRing(state.center.x, state.height * 0.22, {
       color: variant.slashColor,
       radius: 26,
@@ -1859,6 +1993,7 @@
       lineWidth: 4
     })
     playVictorySound()
+    analytics.track("boss_defeated", { level: boss.level, boss: boss.name, bossesDefeated: state.bossesDefeated })
     markHudDirty()
   }
 
@@ -2601,7 +2736,7 @@
     }
   }
 
-  async function startGame({ playIntroSound = true } = {}) {
+  async function startGame({ playIntroSound = true, analyticsEvent = "game_start" } = {}) {
     const useSampleAudio = audio.enabled && shouldUseSampleAudio()
     const audioReadyPromise = audio.enabled
       ? handleImmediateAudioActivation()
@@ -2641,6 +2776,7 @@
     hideAnnouncement()
     setLoadout(state.selectedLoadout)
     setPhaseLabel("Arena 01")
+    analytics.track(analyticsEvent, { loadout: state.selectedLoadout })
     showAnnouncement("Defense Grid", "Chamber Online", 1.1)
     if (playIntroSound && useSampleAudio) {
       playStartSound()
@@ -2670,6 +2806,7 @@
     bossHud.classList.add("hidden")
     document.body.classList.remove("is-playing")
     playGameOverSound()
+    analytics.track("game_over", { score: state.score, bossesDefeated: state.bossesDefeated, best: state.best })
     updateHud(true)
   }
 
@@ -3468,6 +3605,7 @@
     }
 
     updateSoundLabel()
+    analytics.track("sound_toggle", { enabled: audio.enabled })
   }
 
   function handleUserActivation() {
@@ -3518,7 +3656,7 @@
       playStartSound()
     }
 
-    void startGame({ playIntroSound: !useSampleAudio })
+    void startGame({ playIntroSound: !useSampleAudio, analyticsEvent: "game_start" })
   })
   restartButton.addEventListener("click", () => {
     handleUserActivation()
@@ -3528,7 +3666,16 @@
       playStartSound()
     }
 
-    void startGame({ playIntroSound: !useSampleAudio })
+    void startGame({ playIntroSound: !useSampleAudio, analyticsEvent: "game_restart" })
+  })
+  replayTutorialButton.addEventListener("click", () => {
+    openTutorial({ replay: state.tutorial.state !== "pending" })
+  })
+  tutorialNextButton.addEventListener("click", () => {
+    advanceTutorial()
+  })
+  tutorialSkipButton.addEventListener("click", () => {
+    skipTutorial()
   })
   soundToggle.addEventListener("click", () => {
     void handleSoundToggle()
@@ -3672,6 +3819,8 @@
 
   resize()
   setLoadout(state.selectedLoadout)
+  maybeOpenFirstRunTutorial()
+  updateReplayTutorialButton()
   updateSoundLabel()
   updateHud(true)
   requestAnimationFrame(frame)
