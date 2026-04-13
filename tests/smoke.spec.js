@@ -74,3 +74,23 @@ test('game-over can be forced and displayed via local debug hook', async ({ page
   const state = await page.evaluate(() => window.__daxhqDebug.getState())
   expect(state.mode).toBe('gameover')
 })
+
+test('progression stats persist after a run and boss clear', async ({ page }) => {
+  await resetApp(page)
+
+  await page.getByRole('button', { name: 'Enter Chamber' }).click()
+  await page.evaluate(() => {
+    window.__daxhqDebug.forceBossWinWithThreats()
+  })
+  await page.waitForTimeout(1800)
+  await page.evaluate(() => {
+    window.__daxhqDebug.forceGameOver()
+  })
+
+  const progress = await page.evaluate(() => window.__daxhqDebug.getProgress())
+
+  expect(progress.runsStarted).toBeGreaterThanOrEqual(1)
+  expect(progress.totalScore).toBeGreaterThan(0)
+  expect(progress.bossesDefeated).toBeGreaterThanOrEqual(1)
+  expect(progress.unlocked.length).toBeGreaterThan(0)
+})

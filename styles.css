@@ -548,11 +548,47 @@ body.is-playing {
   font-size: 0.92rem;
 }
 
+.progress-panel {
+  margin-top: 1.1rem;
+  padding: 1rem;
+  border: 1px solid rgba(140, 236, 255, 0.16);
+  background: rgba(8, 16, 29, 0.46);
+}
+
+.progress-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.progress-head h3 {
+  margin: 0.2rem 0 0;
+  font-family: "Orbitron", sans-serif;
+  font-size: clamp(1rem, 2.6vw, 1.25rem);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.progress-copy {
+  max-width: 16rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  text-align: right;
+}
+
+.progress-stats,
 .intro-stats,
-.gameover-stats {
+.gameover-stats,
+.run-summary {
   display: grid;
   gap: 0.9rem;
   margin-top: 1.15rem;
+}
+
+.progress-stats {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .intro-stats {
@@ -562,9 +598,33 @@ body.is-playing {
   border-bottom: 1px solid rgba(140, 236, 255, 0.14);
 }
 
+.progress-stat,
 .intro-stat,
 .gameover-stat {
   min-width: 0;
+}
+
+.progress-stat {
+  padding: 0.8rem 0.9rem;
+  border: 1px solid rgba(140, 236, 255, 0.12);
+  background: rgba(5, 12, 24, 0.45);
+}
+
+.progress-stat span,
+.gameover-stat span {
+  color: var(--muted);
+  font-size: 0.84rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.progress-stat strong,
+.gameover-stat strong {
+  display: block;
+  margin-top: 0.45rem;
+  font-family: "Orbitron", sans-serif;
+  font-size: clamp(1rem, 2.6vw, 1.2rem);
+  letter-spacing: 0.06em;
 }
 
 .intro-stat strong {
@@ -582,7 +642,8 @@ body.is-playing {
   line-height: 1.45;
 }
 
-.gameover-stats {
+.gameover-stats,
+.run-summary {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
@@ -590,6 +651,41 @@ body.is-playing {
   padding: 0.85rem 0.95rem;
   border: 1px solid var(--line);
   background: rgba(8, 16, 29, 0.4);
+}
+
+.achievement-strip,
+.unlock-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 0.95rem;
+}
+
+.achievement-chip {
+  padding: 0.55rem 0.75rem;
+  border: 1px solid rgba(140, 236, 255, 0.14);
+  background: rgba(6, 14, 26, 0.56);
+}
+
+.achievement-chip.is-locked {
+  opacity: 0.55;
+}
+
+.achievement-chip.is-unlocked {
+  border-color: rgba(255, 211, 107, 0.34);
+  background: rgba(255, 186, 72, 0.08);
+}
+
+.achievement-chip strong {
+  display: block;
+  font-size: 0.84rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.achievement-chip span {
+  color: var(--muted);
+  font-size: 0.8rem;
 }
 
 .controls {
@@ -748,6 +844,16 @@ body.is-playing {
 }
 
 @media (max-width: 980px) {
+  .progress-head {
+    flex-direction: column;
+  }
+
+  .progress-copy {
+    max-width: none;
+    text-align: left;
+  }
+
+  .progress-stats,
   .intro-stats {
     grid-template-columns: 1fr;
   }
@@ -838,7 +944,8 @@ body.is-playing {
     grid-template-columns: 1fr;
   }
 
-  .gameover-stats {
+  .gameover-stats,
+  .run-summary {
     grid-template-columns: 1fr;
   }
 
@@ -861,7 +968,8 @@ body.is-playing {
 }
 
 @media (max-height: 760px) {
-  .intro-stats {
+  .intro-stats,
+  .achievement-strip {
     display: none;
   }
 }

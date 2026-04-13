@@ -16,8 +16,23 @@ deflect incoming plasma, parry enemy blade swipes, and wreck boss rounds.
 - mouse and touch saber controls
 - enemy blaster bolts and saber swipe attacks
 - boss rounds with names, health bars, and counterplay
-- local best-score, loadout, and tutorial state saving
+- local best-score, loadout, tutorial state, lifetime stats, and achievements
+- lightweight progression rank and recent unlocks with localStorage only
 - static analytics hooks that no-op unless an analytics surface exists
+
+## Progression
+
+All progression is stored in `localStorage` under `daxhq-progress`. No backend required.
+
+**Lifetime stats:** runs started, total score, best combo, bolts deflected, parries, bosses reached, bosses defeated.
+
+**Ranks** (cosmetic, based on cumulative play):
+Initiate, Deflector, Duelist, Vanguard, Ace, Warden, Legend.
+
+**Achievements** (7 total):
+First Blood, Chain Spark, Return To Sender, Blade Reader, Boss Caller, Breaker, Arena Legend.
+
+Stats and achievements are shown on the intro panel. Run combo peak, current rank, and newly earned achievements appear on the game-over screen.
 
 ## Analytics hooks
 
@@ -41,6 +56,8 @@ Tracked events:
 - `boss_reached`
 - `boss_defeated`
 - `game_over`
+- `achievement_unlocked`
+- `rank_up`
 - `tutorial_started`
 - `tutorial_completed`
 - `tutorial_skipped`
@@ -90,6 +107,7 @@ This project stays fully static and Cloudflare Pages-safe.
 - no build step required
 - no backend, SSR, auth, or server state
 - persistence uses `localStorage`
+- progression is intentionally lightweight: lifetime stats, a small achievement set, and a cosmetic rank only
 - analytics hooks gracefully no-op unless a supported client-side surface exists
 
 You can upload it as plain static files or deploy the folder directly to Cloudflare Pages.

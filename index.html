@@ -206,6 +206,40 @@
           <span>Deflected boss fire hurts the boss</span>
         </div>
 
+        <section class="progress-panel" aria-label="progression">
+          <div class="progress-head">
+            <div>
+              <p class="eyebrow">Pilot record</p>
+              <h3 id="progressRankValue">Rank: Initiate</h3>
+            </div>
+            <p class="progress-copy">Sticky stats, light goals, zero grind.</p>
+          </div>
+
+          <div class="progress-stats">
+            <div class="progress-stat">
+              <span>Runs</span>
+              <strong id="lifetimeRunsValue">0</strong>
+            </div>
+
+            <div class="progress-stat">
+              <span>Total score</span>
+              <strong id="lifetimeScoreValue">0</strong>
+            </div>
+
+            <div class="progress-stat">
+              <span>Best combo</span>
+              <strong id="lifetimeComboValue">0x</strong>
+            </div>
+
+            <div class="progress-stat">
+              <span>Bosses down</span>
+              <strong id="lifetimeBossesValue">0</strong>
+            </div>
+          </div>
+
+          <div class="achievement-strip" id="achievementList" aria-live="polite"></div>
+        </section>
+
         <section class="tutorial-card hidden" id="tutorialCard" aria-live="polite">
           <div>
             <p class="tutorial-step" id="tutorialStepLabel">Quick tutorial</p>
@@ -259,6 +293,20 @@
             <strong id="finalBestValue">0000</strong>
           </div>
         </div>
+
+        <section class="run-summary">
+          <div class="gameover-stat">
+            <span>Run combo peak</span>
+            <strong id="finalComboValue">0x</strong>
+          </div>
+
+          <div class="gameover-stat">
+            <span>Lifetime rank</span>
+            <strong id="finalRankValue">Initiate</strong>
+          </div>
+        </section>
+
+        <div class="unlock-strip" id="recentUnlocks" aria-live="polite"></div>
 
         <button class="start-button" id="restartButton" type="button">
           Run It Back

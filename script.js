@@ -34,9 +34,20 @@
   const tutorialNextButton = document.getElementById("tutorialNextButton")
   const loadoutOptions = Array.from(document.querySelectorAll("[data-loadout]"))
 
+  const lifetimeRunsValue = document.getElementById("lifetimeRunsValue")
+  const lifetimeScoreValue = document.getElementById("lifetimeScoreValue")
+  const lifetimeComboValue = document.getElementById("lifetimeComboValue")
+  const lifetimeBossesValue = document.getElementById("lifetimeBossesValue")
+  const progressRankValue = document.getElementById("progressRankValue")
+  const finalComboValue = document.getElementById("finalComboValue")
+  const finalRankValue = document.getElementById("finalRankValue")
+  const achievementList = document.getElementById("achievementList")
+  const recentUnlocks = document.getElementById("recentUnlocks")
+
   const STORAGE_KEY = "daxhq-best-score"
   const LOADOUT_STORAGE_KEY = "daxhq-loadout"
   const TUTORIAL_STORAGE_KEY = "daxhq-tutorial-state"
+  const PROGRESS_STORAGE_KEY = "daxhq-progress"
   const FIRST_BOSS_SCORE = 720
   const BOSS_VARIANTS = [
     {
@@ -247,6 +258,179 @@
     } catch {}
   }
 
+  const RANKS = [
+    { title: "Initiate", threshold: 0 },
+    { title: "Deflector", threshold: 4 },
+    { title: "Duelist", threshold: 10 },
+    { title: "Vanguard", threshold: 20 },
+    { title: "Ace", threshold: 34 },
+    { title: "Warden", threshold: 52 },
+    { title: "Legend", threshold: 76 }
+  ]
+
+  const ACHIEVEMENTS = [
+    { id: "first-run", title: "First Blood", copy: "Start one chamber run.", test: (p) => p.runsStarted >= 1 },
+    { id: "combo-12", title: "Chain Spark", copy: "Hit a 12x combo.", test: (p) => p.bestCombo >= 12 },
+    { id: "deflect-100", title: "Return To Sender", copy: "Deflect 100 bolts total.", test: (p) => p.boltsDeflected >= 100 },
+    { id: "parry-50", title: "Blade Reader", copy: "Parry 50 enemy slashes.", test: (p) => p.parries >= 50 },
+    { id: "boss-reached", title: "Boss Caller", copy: "Reach your first boss round.", test: (p) => p.bossesReached >= 1 },
+    { id: "boss-3", title: "Breaker", copy: "Defeat 3 bosses across all runs.", test: (p) => p.bossesDefeated >= 3 },
+    { id: "score-5000", title: "Arena Legend", copy: "Bank 5,000 total score.", test: (p) => p.totalScore >= 5000 }
+  ]
+
+  function defaultProgress() {
+    return {
+      runsStarted: 0,
+      totalScore: 0,
+      bestScore: 0,
+      bestCombo: 0,
+      boltsDeflected: 0,
+      parries: 0,
+      bossesReached: 0,
+      bossesDefeated: 0,
+      unlocked: [],
+      lastRun: {
+        score: 0,
+        bossesDefeated: 0,
+        combo: 0,
+        unlocks: []
+      }
+    }
+  }
+
+  function normalizeProgress(parsed = {}) {
+    const fallback = defaultProgress()
+    return {
+      runsStarted: parsed.runsStarted ?? parsed.runs ?? 0,
+      totalScore: parsed.totalScore || 0,
+      bestScore: parsed.bestScore || 0,
+      bestCombo: parsed.bestCombo || 0,
+      boltsDeflected: parsed.boltsDeflected ?? parsed.deflects ?? 0,
+      parries: parsed.parries || 0,
+      bossesReached: parsed.bossesReached || 0,
+      bossesDefeated: parsed.bossesDefeated ?? parsed.bossesDown ?? 0,
+      unlocked: Array.isArray(parsed.unlocked) ? parsed.unlocked : [],
+      lastRun: {
+        score: parsed.lastRun?.score || 0,
+        bossesDefeated: parsed.lastRun?.bossesDefeated || 0,
+        combo: parsed.lastRun?.combo || 0,
+        unlocks: Array.isArray(parsed.lastRun?.unlocks) ? parsed.lastRun.unlocks : fallback.lastRun.unlocks
+      }
+    }
+  }
+
+  function readProgress() {
+    try {
+      const raw = localStorage.getItem(PROGRESS_STORAGE_KEY)
+      return raw ? normalizeProgress(JSON.parse(raw)) : defaultProgress()
+    } catch {
+      return defaultProgress()
+    }
+  }
+
+  function writeProgress(progressState) {
+    try {
+      localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progressState))
+    } catch {}
+  }
+
+  function getRank(progressState) {
+    let rank = RANKS[0]
+    const points =
+      progressState.bossesDefeated * 5 +
+      progressState.bossesReached * 2 +
+      Math.floor(progressState.totalScore / 600) +
+      Math.floor(progressState.bestCombo / 4)
+
+    for (const candidate of RANKS) {
+      if (points >= candidate.threshold) {
+        rank = candidate
+      }
+    }
+
+    return rank
+  }
+
+  function renderAchievementList(progressState) {
+    if (!achievementList) {
+      return
+    }
+
+    achievementList.innerHTML = ""
+    for (const achievement of ACHIEVEMENTS) {
+      const unlocked = progressState.unlocked.includes(achievement.id)
+      const chip = document.createElement("div")
+      chip.className = `achievement-chip ${unlocked ? "is-unlocked" : "is-locked"}`
+      chip.innerHTML = `<strong>${achievement.title}</strong><span>${achievement.copy}</span>`
+      achievementList.appendChild(chip)
+    }
+  }
+
+  function renderRecentUnlocks(progressState) {
+    if (!recentUnlocks) {
+      return
+    }
+
+    recentUnlocks.innerHTML = ""
+    for (const unlockId of progressState.lastRun.unlocks) {
+      const achievement = ACHIEVEMENTS.find((item) => item.id === unlockId)
+      if (!achievement) {
+        continue
+      }
+
+      const chip = document.createElement("div")
+      chip.className = "achievement-chip is-unlocked"
+      chip.innerHTML = `<strong>${achievement.title}</strong><span>${achievement.copy}</span>`
+      recentUnlocks.appendChild(chip)
+    }
+  }
+
+  function renderProgress(progressState) {
+    const rank = getRank(progressState)
+
+    if (progressRankValue) progressRankValue.textContent = `Rank: ${rank.title}`
+    if (lifetimeRunsValue) lifetimeRunsValue.textContent = String(progressState.runsStarted)
+    if (lifetimeScoreValue) lifetimeScoreValue.textContent = String(progressState.totalScore)
+    if (lifetimeComboValue) lifetimeComboValue.textContent = `${progressState.bestCombo}x`
+    if (lifetimeBossesValue) lifetimeBossesValue.textContent = String(progressState.bossesDefeated)
+    if (finalRankValue) finalRankValue.textContent = rank.title
+
+    renderAchievementList(progressState)
+    renderRecentUnlocks(progressState)
+  }
+
+  function unlockAchievements(progressState, context = {}) {
+    const unlockedNow = []
+
+    for (const achievement of ACHIEVEMENTS) {
+      if (!progressState.unlocked.includes(achievement.id) && achievement.test(progressState)) {
+        progressState.unlocked.push(achievement.id)
+        unlockedNow.push(achievement.id)
+        analytics.track("achievement_unlocked", {
+          achievementId: achievement.id,
+          title: achievement.title,
+          ...context
+        })
+      }
+    }
+
+    if (unlockedNow.length > 0) {
+      progressState.lastRun.unlocks = [...progressState.lastRun.unlocks, ...unlockedNow].slice(-3)
+      const latest = ACHIEVEMENTS.find((item) => item.id === unlockedNow[unlockedNow.length - 1])
+      if (latest) {
+        showAnnouncement("Achievement Unlocked", latest.title, 1.8)
+      }
+    }
+  }
+
+  function saveAndRenderProgress(context = {}) {
+    unlockAchievements(progress, context)
+    writeProgress(progress)
+    renderProgress(progress)
+  }
+
+  let progress = readProgress()
+
   const initialLoadoutId = readSavedLoadout()
   const initialLoadout = SABER_LOADOUTS[initialLoadoutId] || SABER_LOADOUTS.blue
 
@@ -334,6 +518,7 @@
     cooldownTimer: 0,
     score: 0,
     combo: 0,
+    runBestCombo: 0,
     integrity: 100,
     best: readBestScore(),
     bossesDefeated: 0,
@@ -346,6 +531,8 @@
     coreHitCooldown: 0,
     announcementTimer: 0,
     parryHintShown: false,
+    runDeflects: 0,
+    runParries: 0,
     selectedLoadout: initialLoadout.id,
     hudDirty: true,
     center: {
@@ -856,6 +1043,14 @@
     }
 
     markHudDirty()
+  }
+
+  function recordComboPeak() {
+    state.runBestCombo = Math.max(state.runBestCombo, state.combo)
+    if (state.runBestCombo > progress.bestCombo) {
+      progress.bestCombo = state.runBestCombo
+      saveAndRenderProgress({ source: "combo" })
+    }
   }
 
   function updateHud(force = false) {
@@ -1815,6 +2010,8 @@
 
     cleanupHostileThreats()
     state.bossIntroTimer = 2
+    progress.bossesReached += 1
+    saveAndRenderProgress({ source: "boss_reached", level })
     setPhaseLabel(`Boss ${String(level).padStart(2, "0")}`)
     showAnnouncement("Boss Incoming", bossNameForLevel(level), 2.1)
     analytics.track("boss_reached", { level, boss: bossNameForLevel(level) })
@@ -1973,6 +2170,8 @@
     boss.slashTimer = 999
     boss.vulnerableTimer = 0
     state.bossesDefeated += 1
+    progress.bossesDefeated += 1
+    saveAndRenderProgress({ source: "boss_defeated", level: boss.level })
     state.bossLevel += 1
     state.nextBossScore += 860 + boss.level * 160
     state.cooldownTimer = 3.1
@@ -2474,6 +2673,11 @@
     bolt.deflectY = bolt.y
 
     state.combo += 1
+    state.runDeflects += 1
+    state.runBestCombo = Math.max(state.runBestCombo, state.combo)
+    progress.boltsDeflected += 1
+    recordComboPeak()
+    saveAndRenderProgress({ source: "deflect" })
     state.pointer.hitCooldown = usingCoarseInput() ? 0.085 : 0.055
     addScore(10 + Math.min(50, state.combo * 2))
     state.pulse = 1
@@ -2647,6 +2851,11 @@
     slash.parryTimer = 0.18
 
     state.combo += 1
+    state.runParries += 1
+    state.runBestCombo = Math.max(state.runBestCombo, state.combo)
+    progress.parries += 1
+    recordComboPeak()
+    saveAndRenderProgress({ source: "parry" })
     state.pointer.hitCooldown = usingCoarseInput() ? 0.09 : 0.06
     addScore(slash.scoreValue + Math.min(60, state.combo * 3))
     state.pulse = 1
@@ -2757,6 +2966,8 @@
     state.bossLevel = 0
     state.nextBossScore = FIRST_BOSS_SCORE
     state.parryHintShown = false
+    state.runDeflects = 0
+    state.runParries = 0
     state.pulse = 0
     state.damageFlash = 0
     state.shake = 0
@@ -2767,6 +2978,10 @@
     state.particles = []
     state.rings = []
     state.boss = null
+
+    progress.runsStarted += 1
+    progress.lastRun.unlocks = []
+    saveAndRenderProgress({ source: analyticsEvent })
 
     introPanel.classList.add("hidden")
     gameOverPanel.classList.add("hidden")
@@ -2798,15 +3013,30 @@
     hideAnnouncement()
     setPhaseLabel("Core Breached")
 
+    progress.totalScore += state.score
+    progress.bestScore = Math.max(progress.bestScore, state.score)
+    progress.bestCombo = Math.max(progress.bestCombo, state.runBestCombo)
+    progress.lastRun = {
+      score: state.score,
+      bossesDefeated: state.bossesDefeated,
+      combo: state.runBestCombo,
+      unlocks: []
+    }
+    saveAndRenderProgress({ source: "game_over", score: state.score })
+
+    const rank = getRank(progress)
+
     finalScoreValue.textContent = String(state.score)
     finalBestValue.textContent = String(state.best).padStart(4, "0")
     bossesDefeatedValue.textContent = String(state.bossesDefeated)
+    if (finalComboValue) finalComboValue.textContent = `${state.runBestCombo}x`
+    if (finalRankValue) finalRankValue.textContent = rank.title
 
     gameOverPanel.classList.remove("hidden")
     bossHud.classList.add("hidden")
     document.body.classList.remove("is-playing")
     playGameOverSound()
-    analytics.track("game_over", { score: state.score, bossesDefeated: state.bossesDefeated, best: state.best })
+    analytics.track("game_over", { score: state.score, bossesDefeated: state.bossesDefeated, best: state.best, rank: rank.title })
     updateHud(true)
   }
 
@@ -3717,6 +3947,7 @@
             }
           : null
       }),
+      getProgress: () => JSON.parse(JSON.stringify(progress)),
       forceBossRound() {
         if (state.mode !== "playing") {
           startGame()
@@ -3830,6 +4061,7 @@
   maybeOpenFirstRunTutorial()
   updateReplayTutorialButton()
   updateSoundLabel()
+  renderProgress(progress)
   updateHud(true)
   requestAnimationFrame(frame)
 })()
