@@ -730,10 +730,13 @@
       deflectRadius: coarseInput ? (assistMode ? 22 : 16) : 24,
       deflectPowerBonus: coarseInput ? (assistMode ? 12 : 9) : 12,
       deflectCooldown: coarseInput ? (assistMode ? 0.072 : 0.085) : 0.055,
-      parrySpeed: coarseInput ? (assistMode ? 176 : 200) : 160,
-      parryRadius: coarseInput ? (assistMode ? 24 : 18) : 25,
-      parryPowerBonus: coarseInput ? (assistMode ? 15 : 12) : 16,
-      parryCooldown: coarseInput ? (assistMode ? 0.078 : 0.09) : 0.06
+      parrySpeed: coarseInput ? (assistMode ? 176 : 200) : 146,
+      parryRadius: coarseInput ? (assistMode ? 24 : 18) : 31,
+      parryPowerBonus: coarseInput ? (assistMode ? 15 : 12) : 18,
+      parryCooldown: coarseInput ? (assistMode ? 0.078 : 0.09) : 0.06,
+      parryGrace: coarseInput ? (assistMode ? 0.05 : 0.03) : 0.05,
+      bossParryOuterGate: coarseInput ? 0.5 : 0.46,
+      raiderParryOuterGate: coarseInput ? 0.4 : 0.34
     }
   }
 
@@ -3000,7 +3003,11 @@
         continue
       }
 
-      if (slash.age < slash.telegraphDuration + slash.activeDuration) {
+      const tuning = getInputTuning()
+      const slashEndAge = slash.telegraphDuration + slash.activeDuration
+      const parryEndAge = slashEndAge + tuning.parryGrace
+
+      if (slash.age < parryEndAge) {
         const progress = clamp(
           (slash.age - slash.telegraphDuration) / slash.activeDuration,
           0,
@@ -3011,11 +3018,11 @@
 
         const segment = getSlashSegment(slash)
         const contact = findParryContact(segment, slash.width)
+        const outerGate = slash.owner === "boss" ? tuning.bossParryOuterGate : tuning.raiderParryOuterGate
 
         if (
           contact &&
-          Math.hypot(contact.x - slash.originX, contact.y - slash.originY) >
-            slash.length * (slash.owner === "boss" ? 0.58 : 0.44)
+          Math.hypot(contact.x - slash.originX, contact.y - slash.originY) > slash.length * outerGate
         ) {
           parrySlash(slash, contact)
         }
@@ -3031,7 +3038,7 @@
         damageCore(slash.damage, segment.impactX, segment.impactY)
       }
 
-      if (slash.age >= slash.telegraphDuration + slash.activeDuration + slash.fadeDuration) {
+      if (slash.age >= parryEndAge + slash.fadeDuration) {
         state.slashes.splice(index, 1)
       }
     }
