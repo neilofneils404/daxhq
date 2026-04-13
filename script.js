@@ -633,6 +633,12 @@
     state.tutorial.active = true
     state.tutorial.index = 0
     updateTutorialCard()
+
+    window.requestAnimationFrame(() => {
+      tutorialCard.scrollIntoView({ behavior: "smooth", block: "nearest" })
+      tutorialNextButton.focus({ preventScroll: true })
+    })
+
     analytics.track("tutorial_started", { replay })
   }
 
