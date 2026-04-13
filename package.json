@@ -1,0 +1,11 @@
+{
+  "name": "daxhq",
+  "private": true,
+  "scripts": {
+    "smoke:test": "playwright test",
+    "smoke:test:headed": "playwright test --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.2"
+  }
+}

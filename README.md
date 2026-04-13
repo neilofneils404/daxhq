@@ -56,6 +56,22 @@ python3 -m http.server 4173
 
 Then open `http://localhost:4173`.
 
+## Smoke Tests
+
+From `/Users/neil/Projects/daxhq`:
+
+```bash
+npm install
+npx playwright install chromium
+npm run smoke:test
+```
+
+Notes:
+
+- the Playwright config starts the same static server automatically on `127.0.0.1:4173`
+- tests stay fully local and use localhost-only debug hooks, so production remains static and unchanged
+- for a visible browser run, use `npm run smoke:test:headed`
+
 ## Refresh The Social Card
 
 From `/Users/neil/Projects/daxhq`:

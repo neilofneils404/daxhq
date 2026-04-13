@@ -3765,6 +3765,14 @@
         state.boss.vulnerableTimer = 2
         state.boss.damageCooldown = 0
         damageBoss(9999, state.boss.x, state.boss.y)
+      },
+      forceGameOver() {
+        if (state.mode !== "playing") {
+          startGame({ playIntroSound: false })
+        }
+
+        state.integrity = 0
+        endGame()
       }
     }
 
